@@ -7,8 +7,14 @@ char saltos = 0;
 
 int main(void)
 {
-	for(char e;e<8;e++)
+	for(char e=0;e<8;e++)
 	{
 		saltos++;
+
+		if(saltos>=7)
+		{
+			saltos=0;
+		}
 	}
+
 }
