@@ -1,8 +1,8 @@
 /**
  ******************************************************************************
  * @file           : main.c
- * @author         : Jloperag
- * @brief          : Configuracion basica de un proyecto
+ * @author         : juloperag
+ * @brief          : Configuracion basica proyecto
  ******************************************************************************
  */
 
@@ -11,10 +11,10 @@
 
 int main(void)
 {
-    /* Loop forever */
-	while()
+	while(1)
 	{
 
 	}
+
 	return 0;
 }
