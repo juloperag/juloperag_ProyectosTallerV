@@ -21,6 +21,7 @@
 #define SRAM_BASE_ADOR   0x20000000U  //Esta es la memoria RAM, 128KB.
 
 //Se agrega direccion de la memoria base para cada uno de los perifericos APB1,APB2,AHB1, AHB2.
+//Pagina 53 Datasheet
 
 #define APB1_BASE_ADOR   0x40000000U
 #define APB2_BASE_ADOR   0x40010000U
@@ -46,7 +47,50 @@
 #define GPIOB_BASE_ADDR (AHB1_BASE_ADDR + 0x0400U)
 #define GPIOA_BASE_ADDR (AHB1_BASE_ADDR + 0x0000U)
 
-//Linea 84
+//Posicion de memoria para perifericos del APB2
+//Para este ejercicio no es necesario, solo se escribe un ejemplo
+
+/*#define TIM11_BASE_ADDR (APB2_BASE_ADOR + 0x4800U)
+* #define TIM10_BASE_ADDR (APB2_BASE_ADOR + 0x4400U)
+*/
+
+//Posicion de memoria para perifericos del APB1
+//Para este ejercicio no es necesario, solo se escribe un ejemplo
+
+/*#define I2C3_BASE_ADDR  (APB1_BASE_ADOR  + 0x5C00U)
+ *#define I2C2_BASE_ADDR  (APB1_BASE_ADOR  + 0x5800U)
+ */
+
+//Macros Genericos
+
+#define ENABLE 			1
+#define DISABLE 		0
+#define SET 			ENABLE
+#define CLEAR			DISABLE
+#define RESET			DISABLE
+#define GPIO_PIN_SET	SET
+#define GPIO_PIN_RESET	RESET
+#define	FLAG_SET		SET
+#define	FLAG_RESET		RESET
+#define	I2C_WRITE		0
+#define	I2C_READ		1
+
+/* ++============INICIO de la descripcion de los elementos de los perifericos ==========++*/
+
+/* Definicion de la estructura de datos que presenta a cada uno de los registros que componen el
+ * periferico RCC.
+ */
+
+/*Por el curso solo se define los bits de los registros: 6.3.1(RCC_CR) hasta el 6.3.12(RCC_APB2ENR),
+ * 6.3.17 (RCC_BDCR) y 6.3.18 (RCC_CSR)
+ */
+
+/*NOTA: El offset debe encajar perfectamente en la posicion de memria del equio, indicada en la
+ * de datos, observace que tambien esta indicado los elementos "reservedx".
+ */
+
+
+
 
 
 
