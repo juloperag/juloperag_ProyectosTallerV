@@ -85,9 +85,51 @@
  * 6.3.17 (RCC_BDCR) y 6.3.18 (RCC_CSR)
  */
 
-/*NOTA: El offset debe encajar perfectamente en la posicion de memria del equio, indicada en la
- * de datos, observace que tambien esta indicado los elementos "reservedx".
+/*NOTA: La posicion de memoria (offset) debe encajar perfectamente en la posicion de memoria del equipo, indicada en la
+ * hoja de datos, observace que tambien esta indicado los elementos "reservedx".
  */
+
+//Registros RCC
+typedef struct
+{
+	volatile unit32_t CR; 				//Clock control Registro 							ADDR_OFFSET; 	0x00
+	volatile unit32_t PLLCFGR;			//PLL Congifuration register						ADD_OFFSET;		0x04
+	volatile unit32_t CFGR;				//Clock Configuracion register 						ADDR_OFFSET; 	0x08
+	volatile unit32_t CIR;				//Clock Interrupt register	 						ADDR_OFFSET; 	0x0C
+	volatile unit32_t AHB1RSR;			//AHB1 peripheral reset register 	 				ADDR_OFFSET; 	0x10
+	volatile unit32_t AHB2RSTR;			//AHB2 peripheral reset register 					ADDR_OFFSET; 	0x14
+	volatile unit32_t reserved0;		//reserved	 										ADDR_OFFSET; 	0x18
+	volatile unit32_t reserved1;		//reserved	 										ADDR_OFFSET; 	0x1C
+	volatile unit32_t APB1RSTR;			//APB1 peripheral reset register 	 				ADDR_OFFSET; 	0x20
+	volatile unit32_t APB2RSTR;			//APB2 peripheral reset register	 				ADDR_OFFSET; 	0x24
+	volatile unit32_t reserved2;		//reserved	 										ADDR_OFFSET; 	0x28
+	volatile unit32_t reserved3;		//reserved	 										ADDR_OFFSET; 	0x2C
+	volatile unit32_t AHB1ENR;			//AHB1 peripheral clock enable register	 			ADDR_OFFSET; 	0x30
+	volatile unit32_t AHB2ENR			//AHB2 peripheral clock enable register 	 		ADDR_OFFSET; 	0x34
+	volatile unit32_t reserved4;		//reserved	 										ADDR_OFFSET; 	0x38
+	volatile unit32_t reserved5;		//reserved	 										ADDR_OFFSET; 	0x3C
+	volatile unit32_t APB1ENR;			//APB1 peripheral clock enable register 	 		ADDR_OFFSET; 	0x40
+	volatile unit32_t APB2ENR;			//APB2 peripheral clock enable register	 			ADDR_OFFSET; 	0x44
+	volatile unit32_t reserved6;		//reserved	 										ADDR_OFFSET; 	0x48
+	volatile unit32_t reserved7;		//reserved	 										ADDR_OFFSET; 	0x4C
+	volatile unit32_t AHB1LPENR;		//AHB1 clock enable low power register 	 			ADDR_OFFSET; 	0x50
+	volatile unit32_t AHB2LPENR;		//AHB2 clock enable low power register 	 			ADDR_OFFSET; 	0x54
+	volatile unit32_t reserved8;		//reserved	 										ADDR_OFFSET; 	0x58
+	volatile unit32_t reserved9;		//reserved	 										ADDR_OFFSET; 	0x5C
+	volatile unit32_t APB1LPENR;		//APB1 clock enable low power register 	 			ADDR_OFFSET; 	0x60
+	volatile unit32_t APB2LPENR;		//APB1 clock enable low power register 	 			ADDR_OFFSET; 	0x64
+	volatile unit32_t reserved10;		//reserved	 										ADDR_OFFSET; 	0x68
+	volatile unit32_t reserved11;		//reserved	 										ADDR_OFFSET; 	0x6C
+	volatile unit32_t BDCR;				//Backup domain control register 	 				ADDR_OFFSET; 	0x70
+	volatile unit32_t CSR;				//clock control & status register	 				ADDR_OFFSET; 	0x74
+	volatile unit32_t reserved13;		//reserved	 										ADDR_OFFSET; 	0x78
+	volatile unit32_t reserved12;		//reserved	 										ADDR_OFFSET; 	0x7C
+	volatile unit32_t SSCGR;			//spread spectrum clock generation reg	 			ADDR_OFFSET; 	0x80
+	volatile unit32_t PLLI2SCFGR;		//PLLI2S configuration register 	 				ADDR_OFFSET; 	0x84
+	volatile unit32_t reserved14;		//reserved	 										ADDR_OFFSET; 	0x88
+	volatile unit32_t DCKCFGR;			// Dedicated Clocks Configuration Reg				ADDR_OFFSET; 	0x8C
+} RCC_RegDef_t;
+
 
 
 
