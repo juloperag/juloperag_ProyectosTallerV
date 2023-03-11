@@ -2,23 +2,27 @@
  ******************************************************************************
  * @file           : main.c
  * @author         : juloperag
- * @brief          : Configuracion del Hal
+ * @brief          : Ejemplo de struct
  ******************************************************************************
  */
 
 #include <stdint.h>
-#include <Hal.h>
+#include <StructureExample.h>
 
-GPIOx_RegDef_t registro={0};
+BasicExample muestraA = {0};
 
 int main(void)
 {
-	registro.MODER = 0;
-	registro.OTYPER = 1;
+	muestraA.ID = 4;
+	muestraA.ID2 = 40;
+	muestraA.DRR = 3;
 
 	while(1)
 	{
+		for(char e=0; e<muestraA.DRR;e++)
+		{
 
+		}
 	}
 
 	return 0;
