@@ -12,19 +12,22 @@
 #include <GPIOxDriver.h>
 
 /*Definicion de arreglos que contiene la configuracion de los pines de acuerdo a su posicion
- * para represesntar numeros binarios: PC9, PC6, PB8, PA6, PC7, PC8, PA7
+ * para representar numeros binarios: PC9, PC6, PB8, PA6, PC7, PC8, PA7
  */
 uint8_t gpio[7] = {3, 3, 2, 1, 3, 3, 1};
 uint8_t pin_led[7] = {PIN_9, PIN_6, PIN_8, PIN_6, PIN_7, PIN_8, PIN_7};
 
 //Definicion de variables
 uint32_t tiempo = 16000000;
-uint8_t contador = 0;
+uint8_t contador = 2;
 
 //variables para la conversion de decimal a binario
+uint8_t residuo[8] = {0,0,0,0,0,0,0,0};
 uint8_t dec_bin[8] = {0,0,0,0,0,0,0,0};
-uint8_t n = 0;
 uint8_t con = 0;
+
+//variable que guarda el del Valor Boton
+uint8_t valor = 0;
 
 int main(void)
 {
@@ -54,6 +57,23 @@ int main(void)
 	handlerUserPin.pGIOx = GPIOC;
 	//Definimos el pin  a utilizar
 	handlerUserPin.GPIO_PinConfig.GPIO_PinNumber = PIN_6; 						//PIN_x, 0-15
+	//Definimos la configuracion de los registro para un pin selecionado
+	handlerUserPin.GPIO_PinConfig.GPIO_PinModer 		= GPIO_MODE_OUT; 		//GPIO_MODE_x--->IN, OUT, ALTFN, ANALOG
+	handlerUserPin.GPIO_PinConfig.GPIO_PinOTPype 		= GPIO_OTYPER_PUSHPULL;	//GPIO_OTYPER_x---> PUSHPULL, OPENDRAIN
+	handlerUserPin.GPIO_PinConfig.GPIO_PinSpeed 		= GPIO_OSPEEDR_MEDIUM;	//GPIO_OSPEEDR_x---> LOW, MEDIUM, FAST, HIGH
+	handlerUserPin.GPIO_PinConfig.GPIO_PinPUPdControl 	= GPIO_PUPDR_NOTHING; 	//GPIO_PUPDR_x ---> NOTHING, PULLUP, PULLDOWN, RESERVED
+	handlerUserPin.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF0;					//AFx, 0-15
+
+	/*Cargamos la configuracion del PIN especifico
+	 * Vease: void GPIO_Config (GPIO_Handler_t *pGPIOHandler)
+	 */
+	GPIO_Config (&handlerUserPin);
+
+	//------------------Configuracion PIN PB8-------------------------------
+	//Definimos el GPIO a utilizar
+	handlerUserPin.pGIOx = GPIOB;
+	//Definimos el pin  a utilizar
+	handlerUserPin.GPIO_PinConfig.GPIO_PinNumber = PIN_8; 						//PIN_x, 0-15
 	//Definimos la configuracion de los registro para un pin selecionado
 	handlerUserPin.GPIO_PinConfig.GPIO_PinModer 		= GPIO_MODE_OUT; 		//GPIO_MODE_x--->IN, OUT, ALTFN, ANALOG
 	handlerUserPin.GPIO_PinConfig.GPIO_PinOTPype 		= GPIO_OTYPER_PUSHPULL;	//GPIO_OTYPER_x---> PUSHPULL, OPENDRAIN
@@ -102,7 +122,7 @@ int main(void)
 
 	//------------------Configuracion PIN PC8-------------------------------
 	//Definimos el GPIO a utilizar
-	handlerUserPin.pGIOx = GPIOB;
+	handlerUserPin.pGIOx = GPIOC;
 	//Definimos el pin  a utilizar
 	handlerUserPin.GPIO_PinConfig.GPIO_PinNumber = PIN_8; 						//PIN_x, 0-15
 	//Definimos la configuracion de los registro para un pin selecionado
@@ -134,13 +154,29 @@ int main(void)
 	 */
 	GPIO_Config (&handlerUserPin);
 
+	//------------------Configuracion PIN PC13-------------------------------
+	//Definimos el GPIO a utilizar
+	handlerUserPin.pGIOx = GPIOC;
+	//Definimos el pin  a utilizar
+	handlerUserPin.GPIO_PinConfig.GPIO_PinNumber = PIN_13; 						//PIN_x, 0-15
+	//Definimos la configuracion de los registro para un pin selecionado
+	handlerUserPin.GPIO_PinConfig.GPIO_PinModer 		= GPIO_MODE_IN; 		//GPIO_MODE_x--->IN, OUT, ALTFN, ANALOG
+	handlerUserPin.GPIO_PinConfig.GPIO_PinPUPdControl 	= GPIO_PUPDR_NOTHING; 	//GPIO_PUPDR_x ---> NOTHING, PULLUP, PULLDOWN, RESERVED
+	handlerUserPin.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF0;					//AFx, 0-15
+
+	/*Cargamos la configuracion del PIN especifico
+	 * Vease: void GPIO_Config (GPIO_Handler_t *pGPIOHandler)
+	 */
+	GPIO_Config (&handlerUserPin);
+
 	//--------------------------------------Fin de Configuracion GPIOx------------------------------------------------
 
 
 	while(1)
 	{
-		//Conversion decimal a binario
-		n = 0;
+		//---------------------------Conversion decimal a binario---------------------
+		int8_t n = 0;
+		uint8_t i = 0;
 		con = contador;
 		if(con == 0)
 		{
@@ -149,12 +185,24 @@ int main(void)
 				dec_bin[e] = 0;
 			}
 		}
+		//Realizamos un procedimiento para obtener el residuo de la variable contador
 		while (con != 0)
 		{
-			dec_bin[n] = con%2;
+
+			residuo[n] = con%2;
 			con /= 2;
 			n++;
 		}
+		//invertimos los elementos del arreglo "residuo" para obtener la forma binario de la variable contador
+		n=7;
+		while(n>=0)
+		{
+			dec_bin[i] = residuo[n];
+			n--;
+			i++;
+		}
+
+		//-----------------------Estado de salida de los Pines establecidos------------------------
 
 		//Definimos un 1 o 0 en los pines configurados de acuerdo al arreglo "dec_bin"
 		for(uint8_t e=0;e<7;e++)
@@ -187,23 +235,42 @@ int main(void)
 
 
 		//Ciclo for para generar un delay
-		uint32_t tiem= 0;
 
 		for(uint32_t e;e<tiempo;e++)
 		{
-			tiem++;
 		}
 
-		//Incrementador, en caso de llega a 60 se reinicia la cuenta
-		if(contador<=60)
+		//------------------Incremento o decremento de la variable contador---------------------
+
+		//Leemos el valor del PC13 al cual esta conectado al Boton
+		handlerUserPin.pGIOx = GPIOC;
+		handlerUserPin.GPIO_PinConfig.GPIO_PinNumber = PIN_13;
+		valor = GPIO_RedPin (&handlerUserPin);
+
+		//Incrementador. En caso de llega a 60 se reinicia en 1
+		if (valor == 1)
 		{
-			contador++;
+			if(contador<60)
+			{
+				contador++;
+			}
+			else
+			{
+				contador = 1;
+			}
 		}
+		//Decrementador. En caso de llega a 1 se reinicia en 60
 		else
 		{
-			contador = 0;
+			if(contador>1)
+			{
+				contador--;
+			}
+			else
+			{
+				contador = 60;
+			}
 		}
-
 	}
 
 	return 0;
