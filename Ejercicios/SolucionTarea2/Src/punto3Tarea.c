@@ -18,8 +18,8 @@ uint8_t gpio[7] = {3, 3, 2, 1, 3, 3, 1};
 uint8_t pin_led[7] = {PIN_9, PIN_6, PIN_8, PIN_6, PIN_7, PIN_8, PIN_7};
 
 //Definicion de variables
-uint32_t tiempo = 16000000;
-uint8_t contador = 2;
+uint32_t tiempo = 1600000;
+uint8_t contador = 1;
 
 //variables para la conversion de decimal a binario
 uint8_t residuo[8] = {0,0,0,0,0,0,0,0};
@@ -178,13 +178,11 @@ int main(void)
 		int8_t n = 0;
 		uint8_t i = 0;
 		con = contador;
-		if(con == 0)
+		for(uint8_t e=0;e<8;e++)
 		{
-			for(uint8_t e=0;e<8;e++)
-			{
-				dec_bin[e] = 0;
-			}
+			residuo[e] = 0;
 		}
+
 		//Realizamos un procedimiento para obtener el residuo de la variable contador
 		while (con != 0)
 		{
@@ -236,8 +234,9 @@ int main(void)
 
 		//Ciclo for para generar un delay
 
-		for(uint32_t e;e<tiempo;e++)
+		for(uint32_t e=0;e<tiempo;e++)
 		{
+			NOP();
 		}
 
 		//------------------Incremento o decremento de la variable contador---------------------

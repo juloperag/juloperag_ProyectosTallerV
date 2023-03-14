@@ -161,7 +161,7 @@ void GPIO_writePin (GPIO_Handler_t *pPinHandler, uint8_t newState)
 	}
 }
 
-//---------------- MODER: Configurando input----------------------
+//---------------- MODER: Lectura input----------------------
 
 uint32_t GPIO_RedPin (GPIO_Handler_t *pPinHandler)
 {
@@ -177,4 +177,9 @@ uint32_t GPIO_RedPin (GPIO_Handler_t *pPinHandler)
 }
 
 
+//---------------- Toogle ---------------------
+void GPIOxTooglePin(GPIO_Handler_t *pPinHandler)
+{
+	pPinHandler->pGIOx->ODR  ^= (SET << pPinHandler->GPIO_PinConfig.GPIO_PinNumber);
+}
 

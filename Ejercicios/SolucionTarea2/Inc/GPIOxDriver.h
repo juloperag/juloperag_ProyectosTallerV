@@ -44,6 +44,7 @@ typedef struct
 void GPIO_Config (GPIO_Handler_t *pGPIOHandler);
 void GPIO_writePin (GPIO_Handler_t *pPinHandler, uint8_t newState);
 uint32_t GPIO_RedPin (GPIO_Handler_t *pPinHandler);
+void GPIOxTooglePin(GPIO_Handler_t *pPinHandler);
 
 #endif
 

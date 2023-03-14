@@ -11,11 +11,6 @@
 #include <Stm32f4xx.h>
 #include <GPIOxDriver.h>
 
-//Funcion que invierte el estado de un pin
-void GPIOxTooglePin(GPIO_Handler_t *pPinHandler)
-{
-	pPinHandler->pGIOx->ODR  ^= (SET << pPinHandler->GPIO_PinConfig.GPIO_PinNumber);
-}
 
 int main(void)
 {
