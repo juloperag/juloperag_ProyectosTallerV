@@ -25,8 +25,11 @@ int main(void)
 
 	GPIO_writePin(&handlerOnBoardLED, SET);
 
+
 	RCC->APB1ENR |= (0b1<<0); //o con RCC_APB1ENR_TIM2EN;
-	TIM2->CR1 &=TIM_CR1_DIR;
+
+	//Recuerda GPIOC->MODER &= ~(0b11<<10);
+	TIM2->CR1 &=TIM_CR1_DIR;  //Configuramos DIR
 	TIM2->PSC = 16000; //1 milisegundo
 	TIM2->CNT = 0;
 	TIM2->ARR =250;		//autoreloar
