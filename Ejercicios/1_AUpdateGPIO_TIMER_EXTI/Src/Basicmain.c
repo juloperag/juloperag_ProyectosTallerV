@@ -24,7 +24,7 @@ void int_Hardware(void);
 //---------------------------Fin de definicion de funciones y variables base----------------------------------
 
 //Definicion un elemento del tipo EXTI_Config_t para el user boton
-
+EXTI_Config_t handler_Button ={0};
 
 //Definimos una variable para contar
 uint32_t counterExti13=0;
@@ -66,7 +66,8 @@ void int_Hardware(void)
 	GPIO_Config(&handler_led2);
 
 	//---------------PIN: PC13----------------
-	EXTI_Config_t handler_Button ={0};
+	handler_Button.pGPIOHandler = 0;
+	handler_Button.pGPIOHandler->pGPIOx = 0;
 	//Definimos el periferico GPIOx a usar.
 	handler_Button.pGPIOHandler->pGPIOx = GPIOC;
 	//Definimos el pin a utilizar

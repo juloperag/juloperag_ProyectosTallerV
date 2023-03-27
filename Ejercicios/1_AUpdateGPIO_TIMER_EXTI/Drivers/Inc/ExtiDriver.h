@@ -5,8 +5,8 @@
  *      Author: julian
  */
 
-#ifndef INC_EXTIDRIVER_H_
-#define INC_EXTIDRIVER_H_
+#ifndef EXTIDRIVER_H_
+#define EXTIDRIVER_H_
 
 
 #include <stm32f4xx.h>
@@ -21,9 +21,8 @@
 
 typedef struct
 {
-	GPIO_Handler_t *pGPIOHandler; //Definimos un elemento de tipo GPIO_Handler_t
-	uint8_t 		edgeType;	  //Se selecciona un flanco de subida o bajada
-
+	GPIO_Handler_t *pGPIOHandler;	// Canal ADC que será utilizado para la conversión ADC
+	uint8_t			edgeType;		// Se selecciona si se desea un tipo de flanco subiendo o bajando
 }EXTI_Config_t;
 
 //Definimos las cabeceras de las funciones a utilizar
@@ -46,4 +45,4 @@ void callback_extInt13(void);
 void callback_extInt14(void);
 void callback_extInt15(void);
 
-#endif /* INC_EXTIDRIVER_H_ */
+#endif /* EXTIDRIVER_H_ */
