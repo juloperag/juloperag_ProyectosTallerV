@@ -2,7 +2,7 @@
  ******************************************************************************
  * @file           : main.c
  * @author         : juloperag
- * @brief          : Configuracion Basica Proyecto
+ * @brief          : Solucion Tarea 3
  ******************************************************************************
  */
 
@@ -43,16 +43,26 @@ BasicTimer_Handler_t handlermultiplexacion = {0};
 
 //Arreglo que define los pines encendidos para la representacion de un numero en un display de 7 segmentos
 uint8_t num[10] = {0b01111110, 0b00110000, 0b01101101, 0b01111001, 0b00110011,
-		          0b01011011, 0b01011111, 0b01110000, 0b01111111, 0b01111011};
+		           0b01011011, 0b01011111, 0b01110000, 0b01111111, 0b01111011};
+
+//Arreglo que define los pines encendidos para el modo culebrita
+uint8_t cul[12] = {0b01000000, 0b11000000, 0b10000010, 0b10000100, 0b10001000, 0b00000100,
+				   0b00000010, 0b10100000, 0b10010000, 0b00001000, 0b00010000, 0b00100000};
 
 //Variables que representan la cantidad de decenas y unidades
-uint8_t unidad = 8;
-uint8_t decena = 8;
+uint8_t unidad = 0;
+uint8_t decena = 0;
+
+//Variable que representan la posicion de la secuencia en el modo culebrita
+uint8_t secuencia = 0;
 
 //Variable para el respectivo encendido de un display correspondiente a las decenas o unidades
 uint8_t estadoCommon = 0;
 
-/*Definicion un elemento del tipo EXTI_Config_t y PIO_Handler_t para la interrupcion presente en PC12, la cual
+//Variable que selecciona entre el modo numerico y culebrita a ejecutarse
+uint8_t modo=0;
+
+/*Definicion un elemento del tipo EXTI_Config_t y PIO_Handler_t para la interrupcion presente en PA9, la cual
  * esta conectada a la salida A del Encoder.
 */
 GPIO_Handler_t handler_GPIOEncoA =  {0};
@@ -61,7 +71,17 @@ EXTI_Config_t handler_EXTIEncoA  = {0};
 //Definimos elementos del tipo GPIO_Handler_t leer el estado de la salida B del Encoder
 GPIO_Handler_t handler_EncoB = {0};
 
-uint8_t est = 0;
+/*Definicion un elemento del tipo EXTI_Config_t y PIO_Handler_t para la interrupcion presente en PA0, la cual
+ * esta conectada a la salida SW del Encoder.
+*/
+GPIO_Handler_t handler_GPIOEncoSW =  {0};
+EXTI_Config_t handler_EXTIEncoSW  = {0};
+
+//Definicion de las cabeceras de los dos tipos de modo a ejecutarse
+void modo_numerico(void);
+void modo_culebrita(void);
+void mculebrita_EncendidoLed(void);
+
 int main(void)
 {
 	//Realizamos la configuracuion inicial
@@ -269,6 +289,19 @@ void int_Hardware(void)
 
 	//-------------------Inicio de Configuracion EXTIx -----------------------
 
+	//---------------PIN: PC4----------------
+
+	//Definimos el periferico GPIOx a usar.
+	handler_GPIOEncoSW.pGPIOx = GPIOC;
+	//Definimos el pin a utilizar
+	handler_GPIOEncoSW.GPIO_PinConfig.GPIO_PinNumber = PIN_4;
+	//Definimos la posicion del elemento pGIOHandler.
+	handler_EXTIEncoSW.pGPIOHandler = &handler_GPIOEncoSW;
+	//Definimos el tipo de flanco
+	handler_EXTIEncoSW.edgeType = EXTERNAL_INTERRUPP_FALLING_EDGE;
+	//Cargamos la configuracion del EXTIx
+	extInt_Config(&handler_EXTIEncoSW);
+
 	//---------------PIN: PA9----------------
 
 	//Definimos el periferico GPIOx a usar.
@@ -323,7 +356,7 @@ void BasicTimer3_Callback(void)
 	}
 	else if(estadoCommon == 1)
 	{
-		//Encendemos el display correspondiente a las decimales
+		//Encendemos el display correspondiente a las decenas
 		GPIO_writePin (&handler_commonU, 0);
 		GPIO_writePin (&handler_commonD, 1);
 		//Mostramos el numero correspondiente por el display
@@ -342,12 +375,66 @@ void BasicTimer3_Callback(void)
 	}
 }
 
+//Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el EXTI4
+void callback_extInt4(void)
+{
+
+	if(modo==0)
+	{
+		//Desactivamos las interrupciones presentadas por el TIMER 3
+		__disable_irq();
+		handlermultiplexacion.ptrTIMx->DIER &= ~(TIM_DIER_UIE);
+		__enable_irq();
+		mculebrita_EncendidoLed();
+		//Invertimos el valor de la variable modo
+		modo = 1;
+	}
+	else if(modo==1)
+	{
+		//Activamos las interrupciones presentadas por el TIMER 3
+		__disable_irq();
+		handlermultiplexacion.ptrTIMx->DIER |= TIM_DIER_UIE;
+		__enable_irq();
+		//Invertimos el valor de la variable modo
+		modo = 0;
+	}
+	else
+	{
+		__NOP();
+	}
+}
+
 //Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el EXTI12
 
 void callback_extInt9(void)
 {
+	//Deacuerdo al modo establecido se ejecutada la funcion correspondiente a dicho modo
+	if(modo==0)
+	{
+		modo_numerico();
+	}
+	else if(modo==1)
+	{
+		modo_culebrita();
+	}
+	else
+	{
+		__NOP();
+	}
+
+}
+
+//----------------------------Fin de la definicion de las funciones ISR----------------------------------------
+
+
+//----------------------------Inicio de la definicion de las funciones auxiliares-------------------------------------
+
+//Definimos la funcion que se ejecutada en el modo numerico
+void modo_numerico(void)
+{
 	if(GPIO_RedPin (&handler_EncoB) == 1)
 	{
+		//Incremento numerico
 		if(unidad<9)
 		{
 			unidad++;
@@ -360,11 +447,11 @@ void callback_extInt9(void)
 		{
 			unidad=0;
 			decena++;
-
 		}
 	}
 	else if (GPIO_RedPin (&handler_EncoB) == 0)
 	{
+		//Decremento numerico
 		if(unidad>0)
 		{
 			unidad--;
@@ -383,8 +470,59 @@ void callback_extInt9(void)
 	{
 		__NOP();
 	}
+}
 
+//Definimos la funcion que se ejecutada en el modo culebrita
+void modo_culebrita(void)
+{
+	if(GPIO_RedPin (&handler_EncoB) == 1)
+	{
+		//Incremento de la secuencia
+		if(secuencia<11)
+		{
+			secuencia++;
+		}
+		else
+		{
+			secuencia = 0;
+		}
+	}
+	else if (GPIO_RedPin (&handler_EncoB) == 0)
+	{
+		//Decremento de la secuencia
+		if(secuencia>0)
+		{
+			secuencia--;
+		}
+		else
+		{
+			secuencia = 11;
+		}
+	}
+	else
+	{
+		__NOP();
+	}
+	mculebrita_EncendidoLed();
+}
+
+//Definimos la funcion de encendido de los leds para el modo culebrita
+void mculebrita_EncendidoLed(void)
+{
+
+	//Encendemos el display correspondiente a la posicion de la secuencia dada
+	GPIO_writePin (&handler_commonD, (cul[secuencia]>>7)&(0b1));
+	GPIO_writePin (&handler_commonU, ~(cul[secuencia]>>7)&(0b1));
+	//Encendemos un unico led deacuerdo a la posicion de la secuencia dada
+	GPIO_writePin (&handler_ledA, (cul[secuencia]>>6)&(0b1));
+	GPIO_writePin (&handler_ledB, (cul[secuencia]>>5)&(0b1));
+	GPIO_writePin (&handler_ledC, (cul[secuencia]>>4)&(0b1));
+	GPIO_writePin (&handler_ledD, (cul[secuencia]>>3)&(0b1));
+	GPIO_writePin (&handler_ledE, (cul[secuencia]>>2)&(0b1));
+	GPIO_writePin (&handler_ledF, (cul[secuencia]>>1)&(0b1));
+	GPIO_writePin (&handler_ledG, (cul[secuencia]>>0)&(0b1));
 
 }
 
-//----------------------------Fin de la definicion de las funciones ISR----------------------------------------
+//----------------------------Fin de la definicion de las funciones auxiliares-------------------------------------
+
