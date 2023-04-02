@@ -23,9 +23,8 @@ GPIO_Handler_t handler_led2 = {0};
 void int_Hardware(void);
 //---------------------------Fin de definicion de funciones y variables base----------------------------------
 
-//Definicion un elemento del tipo EXTI_Config_t y PIO_Handler_t para el user boton
-GPIO_Handler_t handler_GPIOButton = {0};
-EXTI_Config_t handler_EXTIButton ={0};
+//Definicion un elemento del tipo EXTI_Config_t para el user boton
+
 
 //Definimos una variable para contar
 uint32_t counterExti13=0;
@@ -66,6 +65,20 @@ void int_Hardware(void)
 	//Cargamos la configuracion del PIN especifico
 	GPIO_Config(&handler_led2);
 
+	//---------------PIN: PC13----------------
+	EXTI_Config_t handler_Button ={0};
+	//Definimos el periferico GPIOx a usar.
+	handler_Button.pGPIOHandler->pGPIOx = GPIOC;
+	//Definimos el pin a utilizar
+	handler_Button.pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber = PIN_13; 				//PIN_x, 0-15
+	//Definimos la configuracion de los registro para el pin seleccionado
+	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
+	GPIO_PIN_Config(handler_Button.pGPIOHandler, GPIO_MODE_IN, GPIO_OTYPER_PUSHPULL, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF0);
+	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
+	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
+	//Cargamos la configuracion del PIN especifico
+	GPIO_Config(handler_Button.pGPIOHandler);
+
 	//-------------------Fin de Configuracion GPIOx-----------------------
 
 
@@ -85,19 +98,10 @@ void int_Hardware(void)
 
 
 	//-------------------Inicio de Configuracion EXTIx -----------------------
-
-	//---------------PIN: PC13----------------
-
-	//Definimos el periferico GPIOx a usar.
-	handler_GPIOButton.pGPIOx = GPIOC;
-	//Definimos el pin a utilizar
-	handler_GPIOButton.GPIO_PinConfig.GPIO_PinNumber = PIN_13;
-	//Definimos la posicion del elemento pGIOHandler.
-	handler_EXTIButton.pGPIOHandler = &handler_GPIOButton;
 	//Definimos el tipo de flanco
-	handler_EXTIButton.edgeType = EXTERNAL_INTERRUPP_FALLING_EDGE;
+	handler_Button.edgeType = EXTERNAL_INTERRUPP_FALLING_EDGE;
 	//Cargamos la configuracion del EXTIx
-	extInt_Config(&handler_EXTIButton);
+	extInt_Config(&handler_Button);
 
 	//-------------------Fin de Configuracion EXTIx-----------------------
 
