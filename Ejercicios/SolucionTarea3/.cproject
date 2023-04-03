@@ -50,7 +50,7 @@
 									<listOptionValue builtIn="false" value="../Inc"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc}/mcu_headers/CMSIS/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc}/mcu_headers/CMSIS/Device/ST/STM32F4xx/Include&quot;"/>
-									<listOptionValue builtIn="false" value="/home/julian/Documentos/TallerV/juloperag_ProyectosTallerV/Ejercicios/SolucionTarea3/Drivers/Inc"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc}/SolucionTarea3/Drivers/Inc&quot;"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.720104018" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -76,10 +76,15 @@
 							<tool id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.objcopy.symbolsrec.762416742" name="MCU Output Converter Motorola S-rec with symbols" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.objcopy.symbolsrec"/>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1050579300.1675639551" name="main.c" rcbsApplicability="disable" resourcePath="Src/main.c" toolsToInvoke="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.292474764.803884516">
+						<tool id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.292474764.803884516" name="MCU GCC Compiler" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.292474764">
+							<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1167789667" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
+						</tool>
+					</fileInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Inc"/>
-						<entry excluding="Copia.c|main.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
+						<entry excluding="Copia.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Startup"/>
 					</sourceEntries>
 				</configuration>
@@ -168,15 +173,6 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
-	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.1535406236;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.1535406236.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.2060484613;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.887178833">
-			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1050579300;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1050579300.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.292474764;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.720104018">
-			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-	</storageModule>
 	<storageModule moduleId="refreshScope" versionNumber="2">
 		<configuration configurationName="Debug">
 			<resource resourceType="PROJECT" workspacePath="/BasicConfig"/>
@@ -184,5 +180,14 @@
 		<configuration configurationName="Release">
 			<resource resourceType="PROJECT" workspacePath="/BasicConfig"/>
 		</configuration>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1050579300;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1050579300.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.292474764;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.720104018">
+			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.1535406236;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.1535406236.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.2060484613;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.887178833">
+			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>

@@ -1,21 +1,20 @@
-/*
- * BasicTimer.c
- *
+
+ /*
  *  Created on: 18/03/2023
  *      Author: julian
  */
 
 #include <BasicTimer.h>
 
-//Variable que guarda la referencia de periferico a utilizar
-TIM_TypeDef *ptrTimerUsed;
+//Variable que guarda la referencia del periferico a utilizar
+TIM_TypeDef *ptrTimer2Used;
+TIM_TypeDef *ptrTimer3Used;
+TIM_TypeDef *ptrTimer4Used;
+TIM_TypeDef *ptrTimer5Used;
 
 //Funcion para cargar la configuracion del Timer
 void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler)
 {
-	//Guardamos una referencia al periferico que estamos utilizando
-
-	ptrTimerUsed = ptrBTimerHandler->ptrTIMx;
 
 	//----------------------------0)Desactivamos las interrupcciones globales-----------------------------
 	__disable_irq();
@@ -28,6 +27,10 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler)
 		/*Activamos el periferico escribiendo un 1 deacuerdo a la posicion
 		 * del periferico en el registro*/
 		RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+		//Guardamos una referencia al periferico que estamos utilizando
+		ptrTimer2Used = ptrBTimerHandler->ptrTIMx;
+
 	}
 	//Verificamos para TIM3
 	else if(ptrBTimerHandler->ptrTIMx==TIM3)
@@ -35,6 +38,9 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler)
 		/*Activamos el periferico escribiendo un 1 deacuerdo a la posicion
 		 * del periferico en el registro*/
 		RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+		//Guardamos una referencia al periferico que estamos utilizando
+		ptrTimer3Used = ptrBTimerHandler->ptrTIMx;
 	}
 	//Verificamos para TIM4
 	else if(ptrBTimerHandler->ptrTIMx==TIM4)
@@ -42,6 +48,9 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler)
 		/*Activamos el periferico escribiendo un 1 deacuerdo a la posicion
 		 * del periferico en el registro*/
 		RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
+
+		//Guardamos una referencia al periferico que estamos utilizando
+		ptrTimer4Used = ptrBTimerHandler->ptrTIMx;
 	}
 	//Verificamos para TIM5
 	else if(ptrBTimerHandler->ptrTIMx==TIM5)
@@ -49,6 +58,9 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler)
 		/*Activamos el periferico escribiendo un 1 deacuerdo a la posicion
 		 * del periferico en el registro*/
 		RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;
+
+		//Guardamos una referencia al periferico que estamos utilizando
+		ptrTimer5Used = ptrBTimerHandler->ptrTIMx;
 	}
 	//------------------------------2) Configurando el pre-escaler-----------------------------------------
 	//Registro:TIMx_PSC		//Es un valor de 32 bit
@@ -149,7 +161,7 @@ void TIM2_IRQHandler(void)
 {
 	//Registro:TIMx_SR    Es un registro de almacenamiento del TIMx
 	//limpiamos la bandera que indica que la interrupcion se a generado
-	ptrTimerUsed->SR &= ~TIM_SR_UIF;
+	ptrTimer2Used->SR &= ~TIM_SR_UIF;
 
 	//Ejecute la funcion correspondiente a la interupccion
 	BasicTimer2_Callback();
@@ -160,7 +172,7 @@ void TIM3_IRQHandler(void)
 {
 	//Registro:TIMx_SR    Es un registro de almacenamiento del TIMx
 	//limpiamos la bandera que indica que la interrupcion se a generado
-	ptrTimerUsed->SR &= ~TIM_SR_UIF;
+	ptrTimer3Used->SR &= ~TIM_SR_UIF;
 
 	//Ejecute la funcion correspondiente a la interupccion
 	BasicTimer3_Callback();
@@ -171,7 +183,7 @@ void TIM4_IRQHandler(void)
 {
 	//Registro:TIMx_SR    Es un registro de almacenamiento del TIMx
 	//limpiamos la bandera que indica que la interrupcion se a generado
-	ptrTimerUsed->SR &= ~TIM_SR_UIF;
+	ptrTimer4Used->SR &= ~TIM_SR_UIF;
 
 	//Ejecute la funcion correspondiente a la interupccion
 	BasicTimer4_Callback();
@@ -182,11 +194,13 @@ void TIM5_IRQHandler(void)
 {
 	//Registro:TIMx_SR    Es un registro de almacenamiento del TIMx
 	//limpiamos la bandera que indica que la interrupcion se a generado
-	ptrTimerUsed->SR &= ~TIM_SR_UIF;
+	ptrTimer5Used->SR &= ~TIM_SR_UIF;
 
 	//Ejecute la funcion correspondiente a la interupccion
 	BasicTimer5_Callback();
 
 }
+
+
 
 
