@@ -10,7 +10,7 @@
 
 #include <stm32f4xx.h>
 
-//Definimos constantes
+//Definimos Macros
 
 #define BTIMER_MODE_UP			0
 #define BTIMER_MODE_DOWN		1
