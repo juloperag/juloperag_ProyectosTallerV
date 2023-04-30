@@ -100,10 +100,12 @@ void int_Hardware(void)
 	//Definimos el periferico USARTx a utilizar
 	handler_USB.ptrUSARTx = USART2;
 	//Definimos la configuracion del USART seleccionado
-	handler_USB.USART_Config.USART_mode = USART_MODE_RX ;           //USART_MODE_x  x-> TX, RX, RXTX, DISABLE
-	handler_USB.USART_Config.USART_baudrate = USART_BAUDRATE_9600;  //USART_BAUDRATE_x  x->9600, 19200, 115200
-	handler_USB.USART_Config.USART_parity= USART_PARITY_ODD;       //USART_PARITY_x   x->NONE, ODD, EVEN
-	handler_USB.USART_Config.USART_stopbits=USART_STOPBIT_1_5;         //USART_STOPBIT_x  x->1, 0_5, 2, 1_5
+	handler_USB.USART_Config.USART_mode = USART_MODE_RX ;                     //USART_MODE_x  x-> TX, RX, RXTX, DISABLE
+	handler_USB.USART_Config.USART_baudrate = USART_BAUDRATE_9600;            //USART_BAUDRATE_x  x->9600, 19200, 115200
+	handler_USB.USART_Config.USART_parity= USART_PARITY_ODD;                  //USART_PARITY_x   x->NONE, ODD, EVEN
+	handler_USB.USART_Config.USART_stopbits=USART_STOPBIT_1_5;                //USART_STOPBIT_x  x->1, 0_5, 2, 1_5
+	handler_USB.USART_Config.USART_enableIntRX = USART_RX_INTERRUP_ENABLE;   //USART_RX_INTERRUP_x  x-> DISABLE, ENABLE
+	handler_USB.USART_Config.USART_enableIntTX = USART_TX_INTERRUP_DISABLE;   //USART_TX_INTERRUP_x  x-> DISABLE, ENABLE
 	//Cargamos la configuracion del USART especifico
 	USART_Config(&handler_USB);
 
@@ -136,9 +138,9 @@ void BasicTimer2_Callback(void)
 	segundos++;
 }
 
-void BasicUSART2_Callback(char data)
+void BasicUSART2_Callback(void)
 {
-	letra = data;
+	letra = getRxData();
 }
 
 //----------------------------Fin de la definicion de las funciones ISR----------------------------------------

@@ -9,10 +9,13 @@
 //----------------------------------Inicio de definicion de librerias-------------------------------------------
 #include <stdint.h>
 #include <stm32f411xe.h>
+#include <stdio.h>
 #include <GPIOxDriver.h>
 #include <BasicTimer.h>
 #include <ExtiDriver.h>
-#include "USARTxDriver.h"
+#include <USARTxDriver.h>
+#include <SysTickDriver.h>
+
 //-----------------------------------Inicio de definicion de librerias------------------------------------------
 
 
@@ -34,24 +37,43 @@ GPIO_Handler_t handler_GPIOButton = {0};
 EXTI_Config_t handler_EXTIButton ={0};
 
 //--------------------------USART-------------------------------
-//Definimos un elemento del tipo GPIO_Handler_t (Struct) para transmitir datos por USB
+//Definimos un elemento del tipo GPIO_Handler_t (Struct) y USART_Handler_t para el uso del USB
 GPIO_Handler_t handler_GPIO_USB = {0};
-
-//Definicion un elemento del tipo USART_Handler_t para transmitir datos por USB
 USART_Handler_t handler_USB = {0};
-
-char st[] = " Hola Mundo";
+//Variable que regula el tiempo de impresion
+uint8_t conMg = 1;
+//Definimos string
+char sendMg[] = "Boton presionado \n";
+char bufferMsg[64] = {0};
 
 int main(void)
 {
 	//Realizamos la configuracuion inicial
 	int_Hardware();
 
+	//Activamos el SysTick
+	config_SysTick_ms(0);
+
 	//Definimos para el PIN un 1 logico,
 	GPIO_writePin (&handler_led2, SET);
+
 	while(1)
 	{
-		__NOP();
+		if(conMg>4)
+		{
+			//Definimos el tiempo que a pasado desde que el programa empezo a ejecutarse
+			uint32_t tiempo = (uint32_t) getTicksMs();
+			//ese tiempo lo volvemos un string
+			sprintf(bufferMsg,"Tiempo Transcurrido: %lu ms \n",tiempo);
+			//Enviamos por puerto serial dicho string
+			writeMsg(&handler_USB, bufferMsg);
+			//reniciamos
+			conMg = 1;
+		}
+		else
+		{
+			__NOP();
+		}
 	}
 
 	return 0;
@@ -103,6 +125,8 @@ void int_Hardware(void)
 	handler_USB.USART_Config.USART_baudrate = USART_BAUDRATE_9600;  //USART_BAUDRATE_x  x->9600, 19200, 115200
 	handler_USB.USART_Config.USART_parity= USART_PARITY_NONE;       //USART_PARITY_x   x->NONE, ODD, EVEN
 	handler_USB.USART_Config.USART_stopbits=USART_STOPBIT_1;         //USART_STOPBIT_x  x->1, 0_5, 2, 1_5
+	handler_USB.USART_Config.USART_enableIntRX = USART_RX_INTERRUP_DISABLE;   //USART_RX_INTERRUP_x  x-> DISABLE, ENABLE
+	handler_USB.USART_Config.USART_enableIntTX = USART_TX_INTERRUP_DISABLE;   //USART_TX_INTERRUP_x  x-> DISABLE, ENABLE
 	//Cargamos la configuracion del USART especifico
 	USART_Config(&handler_USB);
 
@@ -152,13 +176,14 @@ void int_Hardware(void)
 void BasicTimer2_Callback(void)
 {
 	GPIOxTooglePin(&handler_led2);
+	conMg++;
 }
 
 //Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el EXTI13
 
 void callback_extInt13(void)
 {
-	writeString(&handler_USB, st);
+	writeMsg(&handler_USB, sendMg);
 }
 
 //----------------------------Fin de la definicion de las funciones ISR----------------------------------------

@@ -39,6 +39,12 @@
 #define USART_STOPBIT_2				2
 #define USART_STOPBIT_1_5			3
 
+#define USART_RX_INTERRUP_DISABLE	0
+#define USART_RX_INTERRUP_ENABLE	1
+
+#define USART_TX_INTERRUP_DISABLE	0
+#define USART_TX_INTERRUP_ENABLE	1
+
 /*Estructura que contiene la configuracion minima para el uso del protocolo de comunicacion
  * Velocidad(baudrate)
  * Tamaño de los datos
@@ -53,6 +59,8 @@ typedef struct
 	//uint8_t USART_datasize;
 	uint8_t USART_parity;
 	uint8_t USART_stopbits;
+	uint8_t USART_enableIntRX;
+	uint8_t USART_enableIntTX;
 }USART_Config_t;
 
 //Handler para el uso de USART
@@ -76,9 +84,10 @@ typedef struct
 //Definicion de las cabeceras de las funciones para el uso del USART
 void USART_Config(USART_Handler_t *ptrUsartHandler);
 void writeChar(USART_Handler_t *ptrUsartHandlerWrite, uint8_t datatoSend);
-void writeString(USART_Handler_t *ptrUsartHandlerString, char *string);
-void BasicUSART1_Callback(char data);
-void BasicUSART2_Callback(char data);
-void BasicUSART6_Callback(char data);
+void writeMsg(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend);
+uint8_t getRxData(void);
+void BasicUSART1_Callback(void);
+void BasicUSART2_Callback(void);
+void BasicUSART6_Callback(void);
 
 #endif /* USARTXDRIVER_H_ */

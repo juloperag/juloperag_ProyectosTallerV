@@ -14,6 +14,9 @@ USART_TypeDef *ptrUSART1Used;
 USART_TypeDef *ptrUSART2Used;
 USART_TypeDef *ptrUSART6Used;
 
+//Variable que almacena el dato recibido
+uint8_t auxRxData = 0;
+
 //Funcion para cargar la configuracion del periferico USART
 void USART_Config(USART_Handler_t *ptrUsartHandler)
 {
@@ -195,26 +198,6 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RE;
 		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_RE;
 
-		//------------Configuramos interrupcion---------------
-		//Activamos el bit RXNEIE
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RXNEIE;
-		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_RXNEIE;
-
-		__disable_irq();
-		if(ptrUsartHandler->ptrUSARTx == USART1)
-		{
-			NVIC_EnableIRQ(USART1_IRQn);
-		}
-		else if(ptrUsartHandler->ptrUSARTx == USART2)
-		{
-			NVIC_EnableIRQ(USART2_IRQn);
-		}
-		else if(ptrUsartHandler->ptrUSARTx == USART6)
-		{
-			NVIC_EnableIRQ(USART6_IRQn);
-		}
-		__enable_irq();
-
 		break;
 	}
 	//Activamos ambas  parte del sistema encargadas de enviar y recibir
@@ -248,7 +231,59 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 	}
 	}
 
-	//-------------------6) Activacion del modulo Serial------------------------
+	//-------------------6) Activacion de las interrupciones------------------------
+	//Registro: CR1
+
+	//Desactivamos las interupciones globales
+	__disable_irq();
+
+	//Se selecciono la interrupcion para RX
+	if(ptrUsartHandler->USART_Config.USART_enableIntRX ==  USART_RX_INTERRUP_ENABLE)
+	{
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RXNEIE;
+		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_RXNEIE;
+	}
+	else
+	{
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RXNEIE;
+	}
+	//Se selecciono la interrupcion para TX
+	if(ptrUsartHandler->USART_Config.USART_enableIntTX ==  USART_TX_INTERRUP_ENABLE)
+	{
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
+		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TXEIE;
+	}
+	else
+	{
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
+	}
+
+
+	//Verificamos si se selecciono alguna interrupcion
+	if(ptrUsartHandler->USART_Config.USART_enableIntRX ==  USART_RX_INTERRUP_ENABLE || ptrUsartHandler->USART_Config.USART_enableIntTX ==  USART_TX_INTERRUP_ENABLE)
+	{
+		//Matriculamos la interrupcion en el NVIC
+		if(ptrUsartHandler->ptrUSARTx == USART1)
+		{
+			NVIC_EnableIRQ(USART1_IRQn);
+		}
+		else if(ptrUsartHandler->ptrUSARTx == USART2)
+		{
+			NVIC_EnableIRQ(USART2_IRQn);
+		}
+		else if(ptrUsartHandler->ptrUSARTx == USART6)
+		{
+			NVIC_EnableIRQ(USART6_IRQn);
+		}
+	}
+	else
+	{
+		__NOP();
+	}
+	//Activamos las interupciones globales
+	__enable_irq();
+
+	//-------------------7) Activacion del modulo Serial------------------------
 	//Registro: CR1
 
 	if(ptrUsartHandler->USART_Config.USART_mode != USART_MODE_DISABLE)
@@ -263,7 +298,11 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 
 void writeChar(USART_Handler_t *ptrUsartHandler, uint8_t datatoSend)
 {
-
+	//Verificamos que no se este enviando un mensaje
+	while(!(ptrUsartHandler->ptrUSARTx->SR & USART_SR_TXE))
+	{
+		__NOP();
+	}
 	//Almacenamos un elemento char en el registro USART_DR
 	ptrUsartHandler->ptrUSARTx->DR = datatoSend;
 
@@ -276,31 +315,37 @@ void writeChar(USART_Handler_t *ptrUsartHandler, uint8_t datatoSend)
 }
 
 //Funcion para escribir un string
-void writeString(USART_Handler_t *ptrUsartHandlerString, char *string)
+void writeMsg(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend)
 {
 	uint8_t i = 0;
 
-	while(string[i] != '\0')
+	while(MsgtoSend[i] != '\0')
 	{
-		writeChar(ptrUsartHandlerString, string[i]);
+		writeChar(ptrUsartHandlerString, MsgtoSend[i]);
 		i++;
 	}
 }
 
+//Funcion para leer un char
+uint8_t getRxData(void)
+{
+	return auxRxData;
+}
+
 //Definimos las funciones para cuando se genera una interrupcion del USART1-2 y 6
-__attribute__((weak)) void BasicUSART1_Callback(char data)
+__attribute__((weak)) void BasicUSART1_Callback(void)
 {
 	__NOP();
 }
 
 
-__attribute__((weak)) void BasicUSART2_Callback(char data)
+__attribute__((weak)) void BasicUSART2_Callback(void)
 {
 	__NOP();
 }
 
 
-__attribute__((weak)) void BasicUSART6_Callback(char data)
+__attribute__((weak)) void BasicUSART6_Callback(void)
 {
 	__NOP();
 }
@@ -314,44 +359,36 @@ __attribute__((weak)) void BasicUSART6_Callback(char data)
 void USART1_IRQHandler(char data)
 {
 	//Confirmamos que el registro RXNE esta activo
-	while(!(ptrUSART1Used->SR & USART_SR_RXNE))
+	if(ptrUSART1Used->SR & USART_SR_RXNE)
 	{
-		__NOP();
+	//Leemos el registro DR del respectivo USART
+	auxRxData = ptrUSART1Used->DR;
+	//Llamanos a la funcion de interrupcion
+	BasicUSART1_Callback();
 	}
 
-	char datatoReceiveUSART1;
-	//Leemos el registro DR del respectivo USART
-	datatoReceiveUSART1 = ptrUSART1Used->DR;
-	//Ademas el bit RXNE es limpiado con la lectura del registro DR
-	BasicUSART2_Callback(datatoReceiveUSART1);
 }
 
 void USART2_IRQHandler(char data)
 {
 	//Confirmamos que el registro RXNE esta activo
-	while(!(ptrUSART2Used->SR & USART_SR_RXNE))
+	if(ptrUSART2Used->SR & USART_SR_RXNE)
 	{
-		__NOP();
-	}
-
-	char datatoReceiveUSART2;
 	//Leemos el registro DR del respectivo USART
-	datatoReceiveUSART2 = ptrUSART2Used->DR;
-	//Ademas el bit RXNE es limpiado con la lectura del registro DR
-	BasicUSART2_Callback(datatoReceiveUSART2);
+	auxRxData = ptrUSART2Used->DR;
+	//Llamanos a la funcion de interrupcion
+	BasicUSART2_Callback();
+	}
 }
 
 void USART6_IRQHandler(void)
 {
 	//Confirmamos que el registro RXNE esta activo
-	while(!(ptrUSART6Used->SR & USART_SR_RXNE))
+	if(ptrUSART6Used->SR & USART_SR_RXNE)
 	{
-		__NOP();
-	}
-
-	char datatoReceiveUSART6;
 	//Leemos el registro DR del respectivo USART
-	datatoReceiveUSART6 = ptrUSART6Used->DR;
-	//Ademas el bit RXNE es limpiado con la lectura del registro DR
-	BasicUSART2_Callback(datatoReceiveUSART6);
+	auxRxData = ptrUSART6Used->DR;
+	//Llamanos a la funcion de interrupcion
+	BasicUSART6_Callback();
+	}
 }
