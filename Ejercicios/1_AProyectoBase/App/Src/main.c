@@ -15,16 +15,17 @@
 #include <ExtiDriver.h>
 #include <USARTxDriver.h>
 #include <SysTickDriver.h>
+#include <PwmDriver.h>
 
-//-----------------------------------Inicio de definicion de librerias------------------------------------------
+//-----------------------------------Fin de definicion de librerias------------------------------------------
 
 
 //---------------------------Inicio de definicion de funciones y variables base----------------------------------
 //Definimos un elemento del tipo GPIO_Handler_t (Struct) para el LED
-GPIO_Handler_t handler_led2 = {0};
+GPIO_Handler_t handler_BlinkyPin = {0};
 
 //Definimos un elemento del tipo GPIO_Handler_t (Struct)
-BasicTimer_Handler_t handlerUserTimer ={0};
+BasicTimer_Handler_t handler_BlinkyTimer ={0};
 
 //Definimos la cabecera para la configuracion
 void int_Hardware(void);
@@ -46,6 +47,14 @@ uint8_t conMg = 1;
 char sendMg[] = "Boton presionado \n";
 char bufferMsg[64] = {0};
 
+//--------------------------PWM-------------------------------
+//Definimos un elemento del tipo GPIO_Handler_t (Struct) y PWM_Handler_t para el uso del PWM
+GPIO_Handler_t handler_GPIO_PWM = {0};
+PWM_Handler_t handler_PWM = {0};
+//Variables para cambiar el duttycicle
+uint8_t duttyporc = 10;
+uint8_t estado = 0;
+
 int main(void)
 {
 	//Realizamos la configuracuion inicial
@@ -55,7 +64,7 @@ int main(void)
 	config_SysTick_ms(0);
 
 	//Definimos para el PIN un 1 logico,
-	GPIO_writePin (&handler_led2, SET);
+	GPIO_writePin (&handler_BlinkyPin, SET);
 
 	while(1)
 	{
@@ -69,6 +78,11 @@ int main(void)
 			writeMsg(&handler_USB, bufferMsg);
 			//reniciamos
 			conMg = 1;
+		}
+		else if(estado==1)
+		{
+			updateDuttyCycle(&handler_PWM, duttyporc);
+			estado = 0;
 		}
 		else
 		{
@@ -89,18 +103,19 @@ void int_Hardware(void)
 
 	//---------------PIN: PA5----------------
 	//Definimos el periferico GPIOx a usar.
-	handler_led2.pGPIOx = GPIOA;
+	handler_BlinkyPin.pGPIOx = GPIOA;
 	//Definimos el pin a utilizar
-	handler_led2.GPIO_PinConfig.GPIO_PinNumber = PIN_5; 						//PIN_x, 0-15
+	handler_BlinkyPin.GPIO_PinConfig.GPIO_PinNumber = PIN_5; 						//PIN_x, 0-15
 	//Definimos la configuracion de los registro para el pin seleccionado
 	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
-	GPIO_PIN_Config(&handler_led2, GPIO_MODE_OUT, GPIO_OTYPER_PUSHPULL, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF0);
+	GPIO_PIN_Config(&handler_BlinkyPin, GPIO_MODE_OUT, GPIO_OTYPER_PUSHPULL, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF0);
 	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
 	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
 	//Cargamos la configuracion del PIN especifico
-	GPIO_Config(&handler_led2);
+	GPIO_Config(&handler_BlinkyPin);
 
 	//---------------PIN: PA2----------------
+	//------------AF7: USART2_TX----------------
 	//Definimos el periferico GPIOx a usar.
 	handler_GPIO_USB.pGPIOx = GPIOA;
 	//Definimos el pin a utilizar
@@ -112,6 +127,20 @@ void int_Hardware(void)
 	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
 	//Cargamos la configuracion del PIN especifico
 	GPIO_Config(&handler_GPIO_USB);
+
+	//---------------PIN: PB6----------------
+	//------------AF2: TIM4_CH1----------------
+	//Definimos el periferico GPIOx a usar.
+	handler_GPIO_PWM.pGPIOx = GPIOB;
+	//Definimos el pin a utilizar
+	handler_GPIO_PWM.GPIO_PinConfig.GPIO_PinNumber = PIN_6; 						//PIN_x, 0-15
+	//Definimos la configuracion de los registro para el pin seleccionado
+	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
+	GPIO_PIN_Config(&handler_GPIO_PWM, GPIO_MODE_ALTFN, GPIO_OTYPER_PUSHPULL, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF2);
+	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
+	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
+	//Cargamos la configuracion del PIN especifico
+	GPIO_Config(&handler_GPIO_PWM);
 
 	//-------------------Fin de Configuracion GPIOx-----------------------
 
@@ -136,13 +165,13 @@ void int_Hardware(void)
 
 	//---------------TIM2----------------
 	//Definimos el TIMx a usar
-	handlerUserTimer.ptrTIMx = TIM2;
+	handler_BlinkyTimer.ptrTIMx = TIM2;
 	//Definimos la configuracion del TIMER seleccionado
-	handlerUserTimer.TIMx_Config.TIMx_periodcnt = BTIMER_PCNT_1ms; //BTIMER_PCNT_xus x->10,100/ BTIMER_PCNT_1ms
-	handlerUserTimer.TIMx_Config.TIMx_mode = BTIMER_MODE_UP; // BTIMER_MODE_x x->UP, DOWN
-	handlerUserTimer.TIMx_Config.TIMX_period = 250;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_BlinkyTimer.TIMx_Config.TIMx_periodcnt = BTIMER_PCNT_1ms; //BTIMER_PCNT_xus x->10,100/ BTIMER_PCNT_1ms
+	handler_BlinkyTimer.TIMx_Config.TIMx_mode = BTIMER_MODE_UP; // BTIMER_MODE_x x->UP, DOWN
+	handler_BlinkyTimer.TIMx_Config.TIMX_period = 250;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	//Cargamos la configuracion del TIMER especifico
-	BasicTimer_Config(&handlerUserTimer);
+	BasicTimer_Config(&handler_BlinkyTimer);
 
 	//-------------------Fin de Configuracion TIMx-----------------------
 
@@ -150,7 +179,6 @@ void int_Hardware(void)
 	//-------------------Inicio de Configuracion EXTIx -----------------------
 
 	//---------------PIN: PC13----------------
-
 	//Definimos el periferico GPIOx a usar.
 	handler_GPIOButton.pGPIOx = GPIOC;
 	//Definimos el pin a utilizar
@@ -164,9 +192,24 @@ void int_Hardware(void)
 
 	//-------------------Fin de Configuracion EXTIx-----------------------
 
+	//-------------------Inicio de Configuracion PWM_Channelx----------------------
+
+	//---------------TIM4_Channel_1----------------
+	//Definimos el TIMx a usar
+	handler_PWM.ptrTIMx = TIM4;
+	//Definimos la configuracion para el PWM
+	handler_PWM.config.periodcnt = BTIMER_PCNT_1us; //BTIMER_PCNT_xus x->1,10,100/ BTIMER_PCNT_1ms
+	handler_PWM.config.periodo = 20000;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_PWM.config.channel = PWM_CHANNEL_1;     //PWM_CHANNEL_x x->1,2,3,4
+	handler_PWM.config.duttyCicle = 10;             //Valor entre 0-100 [%]
+	//Cargamos la configuracion
+	pwm_Config(&handler_PWM);
+	//Activar el TIMER y con ello el PWM
+	startPwmSignal(&handler_PWM);
+
+	//---------------------Fin de Configuracion PWM_Channelx-----------------------
 }
 //------------------------------Fin Configuracion del microcontrolador------------------------------------------
-
 
 
 //----------------------------Inicio de la definicion de las funciones ISR---------------------------------------
@@ -175,7 +218,7 @@ void int_Hardware(void)
 //INTERMITENCIA DEL LED2
 void BasicTimer2_Callback(void)
 {
-	GPIOxTooglePin(&handler_led2);
+	GPIOxTooglePin(&handler_BlinkyPin);
 	conMg++;
 }
 
@@ -184,6 +227,15 @@ void BasicTimer2_Callback(void)
 void callback_extInt13(void)
 {
 	writeMsg(&handler_USB, sendMg);
+	if(duttyporc<100)
+	{
+		duttyporc++;
+	}
+	else
+	{
+		__NOP();
+	}
+	estado = 1;
 }
 
 //----------------------------Fin de la definicion de las funciones ISR----------------------------------------

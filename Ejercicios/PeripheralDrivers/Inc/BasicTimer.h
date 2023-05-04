@@ -15,6 +15,7 @@
 #define BTIMER_MODE_UP			0
 #define BTIMER_MODE_DOWN		1
 
+#define BTIMER_PCNT_1us			1
 #define BTIMER_PCNT_10us		10
 #define	BTIMER_PCNT_100us		100
 #define	BTIMER_PCNT_1ms			1000
