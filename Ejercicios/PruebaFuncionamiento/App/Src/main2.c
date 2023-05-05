@@ -2,7 +2,7 @@
  ******************************************************************************
  * @file           : main.c
  * @author         : juloperag
- * @brief          : Prueba de USART
+ * @brief          : Prueba de Funcionamiento
  ******************************************************************************
  */
 
@@ -11,6 +11,7 @@
 #include <stm32f411xe.h>
 #include <GPIOxDriver.h>
 #include <BasicTimer.h>
+#include <ExtiDriver.h>
 #include <USARTxDriver.h>
 #include <SysTickDriver.h>
 #include <PwmDriver.h>
@@ -36,11 +37,27 @@ USART_Handler_t handler_USB = {0};
 //Variable para guardar el char
 uint8_t  letra = 'A';
 
+//--------Configuracion Cantidades-------
+
+//Arreglo que contiene la cantidad elementos por recipiente
+uint8_t cantidad[6] = {5,4,3,6,5,4};
+//Variable que guarda la cantidad de elementos que pasa delante del sensor
+uint8_t contador = 0;
+//Variable que indica la posicion en el Arreglo
+uint8_t i = 0;
+
+//---------Sensor--------
+//Definicion un elemento del tipo EXTI_Config_t y GPIO_Handler_t para la recepcion de la señal del Sensor Inductivo
+GPIO_Handler_t handler_GPIO_Sensor = {0};
+EXTI_Config_t handler_EXTI_Sensor ={0};
+
 //---------Motor Paso a Paso--------
 //Definimos la cabecera para la funcion que controla el movimiento del motor
 void Control_MPP(void);
 //Definimos un elemento del tipo GPIO_Handler_t (Struct) como señal para girar el motor paso a paso
 GPIO_Handler_t handler_GPIO_MPP = {0};
+//Variable que habilita el movimiento del servo motor
+uint8_t movstate = 1;
 
 //---------Servomotor--------
 //Definimos la cabecera para la funcion que controla el servo motor
@@ -65,14 +82,35 @@ int main(void)
 	{
 		if (letra == '1')
 		{
-			Control_MPP();
+			//Cambiamos el valor de algunas variables
 			letra = 'A';
+			movstate = 1;
+
+			/*El brazo del servo se establece x grados, con lo cual el sistema de transmision se engancha
+			 * con el engranaje del Disco Superior.
+			 */
+			Control_Servo(1);
+			delay_ms(3000);
+
+			//El MPP se mueve cada 10 pasos por cada ciclo While. Se detiene cuando se cumpla la cantidad deseada de elementos.
+			while(movstate)
+			{
+				Control_MPP();
+			}
+
+			/*El brazo del servo se establece 0 grados, con lo cual el sistema de transmision se engancha
+			 * con el engranaje del Disco Inferior.
+			 */
+			Control_Servo(2);
+			delay_ms(3000);
+
+			//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
+			for(uint8_t u=0; u<6; u++)
+			{
+				Control_MPP();
+			}
 		}
-		else if(letra == '2' || letra == '3')
-		{
-			Control_Servo(letra);
-			letra = 'A';
-		}
+
 		else
 		{
 			__NOP();
@@ -173,8 +211,23 @@ void int_Hardware(void)
 	//Cargamos la configuracion del TIMER especifico
 	BasicTimer_Config(&handler_BlinkyTimer);
 
-
 	//-------------------Fin de Configuracion TIMx-----------------------
+
+	//-------------------Inicio de Configuracion EXTIx -----------------------
+
+	//---------------PIN: PC12----------------
+	//Definimos el periferico GPIOx a usar.
+	handler_GPIO_Sensor.pGPIOx = GPIOC;
+	//Definimos el pin a utilizar
+	handler_GPIO_Sensor.GPIO_PinConfig.GPIO_PinNumber = PIN_12;
+	//Definimos la posicion del elemento pGIOHandler.
+	handler_EXTI_Sensor.pGPIOHandler = &handler_GPIO_Sensor;
+	//Definimos el tipo de flanco
+	handler_EXTI_Sensor.edgeType = EXTERNAL_INTERRUPP_RISING_EDGE;
+	//Cargamos la configuracion del EXTIx
+	extInt_Config(&handler_EXTI_Sensor);
+
+	//-------------------Fin de Configuracion EXTIx-----------------------
 
 	//-------------------Inicio de Configuracion PWM_Channelx----------------------
 
@@ -207,6 +260,18 @@ void BasicTimer2_Callback(void)
 
 }
 
+void callback_extInt12(void)
+{
+	contador++;
+	if(contador == cantidad[i])
+	{
+		movstate = 0;
+	}
+	else
+	{
+		__NOP();
+	}
+}
 
 void BasicUSART2_Callback(void)
 {
@@ -228,13 +293,13 @@ void Control_MPP(void)
 }
 
 //Funcion para control de servomotor
-void Control_Servo(uint8_t dato)
+void Control_Servo(uint8_t pos)
 {
-	if(dato=='2')
+	if(pos==1)
 	{
 		updateDuttyCycle(&handler_PWM_Servo, 5);
 	}
-	else if(dato=='3')
+	else if(pos==2)
 	{
 		updateDuttyCycle(&handler_PWM_Servo, 7);
 	}

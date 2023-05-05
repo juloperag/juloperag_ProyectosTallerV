@@ -306,12 +306,12 @@ void writeChar(USART_Handler_t *ptrUsartHandler, uint8_t datatoSend)
 	//Almacenamos un elemento char en el registro USART_DR
 	ptrUsartHandler->ptrUSARTx->DR = datatoSend;
 
-	//Se genera una pausa del codigo, mientras se completa la transferencia de datos
-	while(!(ptrUsartHandler->ptrUSARTx->SR & USART_SR_TC))
-	{
-		__NOP();
-	}
-	ptrUsartHandler->ptrUSARTx->SR &= ~USART_SR_TC;
+//	//Se genera una pausa del codigo, mientras se completa la transferencia de datos
+//	while(!(ptrUsartHandler->ptrUSARTx->SR & USART_SR_TC))
+//	{
+//		__NOP();
+//	}
+//	ptrUsartHandler->ptrUSARTx->SR &= ~USART_SR_TC;
 }
 
 //Funcion para escribir un string
