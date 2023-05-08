@@ -15,6 +15,7 @@
 #include <USARTxDriver.h>
 #include <SysTickDriver.h>
 #include <PwmDriver.h>
+#include <KeyPadDriver.h>
 
 //-----------------------------------Inicio de definicion de librerias------------------------------------------
 
@@ -38,7 +39,6 @@ USART_Handler_t handler_USB = {0};
 uint8_t  letra = 'A';
 
 //--------Configuracion Cantidades-------
-
 //Arreglo que contiene la cantidad elementos por recipiente
 uint8_t cantidad[6] = {5,4,3,6,5,4};
 //Variable que guarda la cantidad de elementos que pasa delante del sensor
@@ -46,7 +46,11 @@ uint8_t contador = 0;
 //Variable que indica la posicion en el Arreglo
 uint8_t i = 0;
 
-//---------Sensor--------
+//---------Interfaz--------
+
+
+
+//---------Sensor----------
 //Definicion un elemento del tipo EXTI_Config_t y GPIO_Handler_t para la recepcion de la señal del Sensor Inductivo
 GPIO_Handler_t handler_GPIO_Sensor = {0};
 EXTI_Config_t handler_EXTI_Sensor ={0};
@@ -80,6 +84,7 @@ int main(void)
 
 	while(1)
 	{
+
 		if (letra == '1')
 		{
 			//Cambiamos el valor de algunas variables
@@ -261,6 +266,18 @@ void BasicTimer2_Callback(void)
 	GPIOxTooglePin(&handler_BlinkyPin);
 
 }
+
+
+void callback_extInt2(void)
+{
+
+}
+
+void callback_extInt3(void)
+{
+
+}
+
 
 void callback_extInt12(void)
 {

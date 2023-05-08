@@ -91,6 +91,8 @@ void pwm_Config(PWM_Handler_t *prtPwmHandler)
 		prtPwmHandler->ptrTIMx->CCMR1 |= TIM_CCMR1_OC1FE;
 		prtPwmHandler->ptrTIMx->CCMR1 &= ~TIM_CCMR1_OC1CE;
 
+		break;
+
 	}
 	//Configuracion del CCMR1_Channel 2
 	case PWM_CHANNEL_2:
@@ -107,6 +109,8 @@ void pwm_Config(PWM_Handler_t *prtPwmHandler)
 		prtPwmHandler->ptrTIMx->CCMR1 &= ~TIM_CCMR1_OC2FE;
 		prtPwmHandler->ptrTIMx->CCMR1 |= TIM_CCMR1_OC2FE;
 		prtPwmHandler->ptrTIMx->CCMR1 &= ~TIM_CCMR1_OC2CE;
+
+		break;
 	}
 	//Configuracion del CCMR2_Channel 3
 	case PWM_CHANNEL_3:
@@ -123,6 +127,8 @@ void pwm_Config(PWM_Handler_t *prtPwmHandler)
 		prtPwmHandler->ptrTIMx->CCMR2 &= ~TIM_CCMR2_OC3FE;
 		prtPwmHandler->ptrTIMx->CCMR2 |= TIM_CCMR2_OC3FE;
 		prtPwmHandler->ptrTIMx->CCMR2 &= ~TIM_CCMR2_OC3CE;
+
+		break;
 	}
 	//Configuracion del CCMR2_Channel 4
 	case PWM_CHANNEL_4:
@@ -139,6 +145,8 @@ void pwm_Config(PWM_Handler_t *prtPwmHandler)
 		prtPwmHandler->ptrTIMx->CCMR2 &= ~TIM_CCMR2_OC4FE;
 		prtPwmHandler->ptrTIMx->CCMR2 |= TIM_CCMR2_OC4FE;
 		prtPwmHandler->ptrTIMx->CCMR2 &= ~TIM_CCMR2_OC4CE;
+
+		break;
 	}
 	default:
 	{
@@ -176,24 +184,32 @@ void enableOutput(PWM_Handler_t *prtPwmHandler)
 	{
 		prtPwmHandler->ptrTIMx->CCER &= ~TIM_CCER_CC1E;
 		prtPwmHandler->ptrTIMx->CCER |= TIM_CCER_CC1E;
+
+		break;
 	}
 	//Activamos el Canal 2
 	case PWM_CHANNEL_2:
 	{
 		prtPwmHandler->ptrTIMx->CCER &= ~TIM_CCER_CC2E;
 		prtPwmHandler->ptrTIMx->CCER |= TIM_CCER_CC2E;
+
+		break;
 	}
 	//Activamos el Canal 3
 	case PWM_CHANNEL_3:
 	{
 		prtPwmHandler->ptrTIMx->CCER &= ~TIM_CCER_CC3E;
 		prtPwmHandler->ptrTIMx->CCER |= TIM_CCER_CC3E;
+
+		break;
 	}
 	//Activamos el Canal 4
 	case PWM_CHANNEL_4:
 	{
 		prtPwmHandler->ptrTIMx->CCER &= ~TIM_CCER_CC4E;
 		prtPwmHandler->ptrTIMx->CCER |= TIM_CCER_CC4E;
+
+		break;
 	}
 	default:
 	{
@@ -239,18 +255,22 @@ void setDuttyCycle(PWM_Handler_t *prtPwmHandler)
 	case PWM_CHANNEL_1:
 	{
 		prtPwmHandler->ptrTIMx->CCR1 = valorDuttyTime;
+		break;
 	}
 	case PWM_CHANNEL_2:
 	{
 		prtPwmHandler->ptrTIMx->CCR2 = valorDuttyTime;
+		break;
 	}
 	case PWM_CHANNEL_3:
 	{
 		prtPwmHandler->ptrTIMx->CCR3 = valorDuttyTime;
+		break;
 	}
 	case PWM_CHANNEL_4:
 	{
 		prtPwmHandler->ptrTIMx->CCR4 = valorDuttyTime;
+		break;
 	}
 	default:
 	{
