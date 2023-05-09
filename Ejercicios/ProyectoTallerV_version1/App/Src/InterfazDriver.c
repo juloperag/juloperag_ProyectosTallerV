@@ -60,6 +60,7 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 		}
 		else
 		{
+			section_Interface++;         //Sumamos a la variable de la seccion
 			wait_Value = 0;              //Establecemos un valor falso para la variable de dicho ciclo while
 			boolsection = 0;
 			boolInterface = 0;
@@ -70,7 +71,7 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 	case 'N':
 	{
 		//verificamos si la seccion es superior a 0
-		if(section_Interface>0)
+		if(section_Interface>0 && section_Interface<4)
 		{
 			section_Interface--;   //Restamos a la variable de la seccion
 			wait_Value = 0;        //Establecemos un valor falso para la variable de dicho ciclo while
@@ -85,7 +86,7 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 	case 'W':
 	{
 		//Verificamos que nos encontramos en la seccion 2
-		if(section_Interface==2)
+		if(section_Interface==2 || section_Interface==4)
 		{
 			//Verificamos si el numero de recipiente es menor a la cantidad de recipientes
 			if(number_containers<(containers-1))
@@ -106,7 +107,7 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 	case 'S':
 	{
 		//Verificamos que nos encontramos en la seccion 2
-		if(section_Interface==2)
+		if(section_Interface==2 || section_Interface==4)
 		{
 			//Verificamos si el numero de recipiente es mayor a 0
 			if(number_containers>0)
@@ -160,10 +161,26 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 	}
 }
 
-//Funcion que ejecuta la interfaz de usuario
+//Funcion que ejecuta la interfaz inicial de usuario
 void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers)
 {
 	char bufferMsg[10] = {0};  //Arreglo que guarda el mensaje a enviar por USART
+
+	//Restablecemos los valores predeterminados
+	boolInterface = 1;
+	boolsection = 1;
+	wait_Value = 1;
+	charRead = '\0';
+	section_Interface = 0;
+	digit_Position = 0;
+	containers= 0;
+	number_containers = 0;
+	unidades = 0;
+	decenas = 0;
+	for(uint8_t i=0;i<6;i++)
+	{
+		amount_containers[i]=0;
+	}
 
 	//Ciclo while que se ejecuta durante la configuracion de las cantidades de los recipientes
 	while(boolInterface)
@@ -178,6 +195,7 @@ void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers)
 			if(section_Interface==1)
 			{
 				//Ciclo while que espera un nuevo caracter leido
+				wait_Value = 1; //Escribimos un valor alto
 				while(wait_Value)
 				{
 					__NOP();
@@ -218,12 +236,15 @@ void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers)
 			//---------------------------seccion 2----------------------------
 			else if(section_Interface==2)
 			{
+				//Ciclo while que espera un nuevo caracter leido
+				wait_Value = 1; //Escribimos un valor alto
 				while(wait_Value)
 				{
 					__NOP();
 				}
-				wait_Value = 1;
+				wait_Value = 1;  //Reiniciamos
 
+				//verificamos que el Caracter es arriba o abajo
 				if(charRead=='W' || charRead=='S')
 				{
 					//Reiniciamos variables
@@ -236,6 +257,7 @@ void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers)
 					sprintf(bufferMsg,"%u \n", amount_containers[number_containers]);
 					writeMsg(prthandlerUSART, bufferMsg);
 				}
+				//verificamos que el Caracter es un numero
 				else if(charRead>='0' && charRead<='9')
 				{
 					//Convertimos y guardamos el caracter leido como un numero entero
@@ -265,6 +287,39 @@ void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers)
 		decenas = 0;
 
 	}
+}
+
+//Funcion que ejecuta la interfaz final de usuario
+uint8_t InterfaceEnd(USART_Handler_t *prthandlerUSART)
+{
+	uint8_t boolchar = 1;
+
+	//Ciclo while que espera unos determinados caracteres
+	while(boolchar)
+	{
+		if(charRead=='W' || charRead=='S' || charRead=='E')
+		{
+			boolchar = 0;
+		}
+		else
+		{
+			__NOP();
+		}
+	}
+
+	//verificamos que el caracter es arriba o abajo
+	if(charRead=='W' || charRead=='S')
+	{
+		//Enviamos mensajes
+		msgContainers(prthandlerUSART);
+	}
+
+	else
+	{
+		__NOP();
+	}
+
+	return number_containers;
 }
 
 //funcion que entrega el mensaje que se debe enviar por cada section
@@ -380,4 +435,17 @@ uint8_t obtainAmount(void)
 	amount = decenas*10+unidades;
 	return amount;
 }
+
+//funcion que retorna el numero de recipientes asignados
+uint8_t amountContainers(void)
+{
+	return containers;
+}
+
+//funcion que retorna el numero de recipientes asignados
+void definenumberContainers(uint8_t value)
+{
+	number_containers = value;
+}
+
 
