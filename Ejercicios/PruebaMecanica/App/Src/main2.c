@@ -154,8 +154,10 @@ void int_Hardware(void)
 	//Definimos la configuracion del USART seleccionado
 	handler_USB.USART_Config.USART_mode = USART_MODE_RX ;           //USART_MODE_x  x-> TX, RX, RXTX, DISABLE
 	handler_USB.USART_Config.USART_baudrate = USART_BAUDRATE_9600;  //USART_BAUDRATE_x  x->9600, 19200, 115200
-	handler_USB.USART_Config.USART_parity= USART_PARITY_ODD;       //USART_PARITY_x   x->NONE, ODD, EVEN
-	handler_USB.USART_Config.USART_stopbits=USART_STOPBIT_1_5;         //USART_STOPBIT_x  x->1, 0_5, 2, 1_5
+	handler_USB.USART_Config.USART_parity= USART_PARITY_NONE;       //USART_PARITY_x   x->NONE, ODD, EVEN
+	handler_USB.USART_Config.USART_stopbits=USART_STOPBIT_1;         //USART_STOPBIT_x  x->1, 0_5, 2, 1_5
+	handler_USB.USART_Config.USART_enableIntRX = USART_RX_INTERRUP_ENABLE;   //USART_RX_INTERRUP_x  x-> DISABLE, ENABLE
+	handler_USB.USART_Config.USART_enableIntTX = USART_TX_INTERRUP_DISABLE;   //USART_TX_INTERRUP_x  x-> DISABLE, ENABLE
 	//Cargamos la configuracion del USART especifico
 	USART_Config(&handler_USB);
 
@@ -220,10 +222,10 @@ void BasicUSART2_Callback(void)
 //Funcion para generar un paso del motor paso a paso
 void Control_MPP(void)
 {
-	for(int u=0; u<21; u++)
+	for(int u=1; u<21; u++)
 	{
 		GPIOxTooglePin(&handler_GPIO_MPP);
-		delay_ms(10);
+		delay_ms(20);
 	}
 }
 
@@ -232,11 +234,11 @@ void Control_Servo(uint8_t dato)
 {
 	if(dato=='2')
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 5);
+		updateDuttyCycle(&handler_PWM_Servo, 7);
 	}
 	else if(dato=='3')
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 7);
+		updateDuttyCycle(&handler_PWM_Servo, 5);
 	}
 	else
 	{

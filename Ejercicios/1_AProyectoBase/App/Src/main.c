@@ -16,53 +16,49 @@
 #include <USARTxDriver.h>
 #include <SysTickDriver.h>
 #include <PwmDriver.h>
+#include <I2CDriver.h>
 
 //-----------------------------------Fin de definicion de librerias------------------------------------------
 
 
 //---------------------------Inicio de definicion de funciones y variables base----------------------------------
-//Definimos un elemento del tipo GPIO_Handler_t (Struct) para el LED
-GPIO_Handler_t handler_BlinkyPin = {0};
 
-//Definimos un elemento del tipo GPIO_Handler_t (Struct)
-BasicTimer_Handler_t handler_BlinkyTimer ={0};
+GPIO_Handler_t handler_BlinkyPin = {0};         //Definimos un elemento del tipo GPIO_Handler_t (Struct) para el LED
+BasicTimer_Handler_t handler_BlinkyTimer ={0};  //Definimos un elemento del tipo GPIO_Handler_t (Struct)
+void int_Hardware(void);                        //Definimos la cabecera para la configuracion
 
-//Definimos la cabecera para la configuracion
-void int_Hardware(void);
 //---------------------------Fin de definicion de funciones y variables base----------------------------------
 
 
 //--------------------------EXTI-------------------------------
-//Definicion un elemento del tipo EXTI_Config_t y PIO_Handler_t para el user boton
-GPIO_Handler_t handler_GPIOButton = {0};
-EXTI_Config_t handler_EXTIButton ={0};
+GPIO_Handler_t handler_GPIO_Button = {0};     //Definicion un elemento del tipo EXTI_Config_t y PIO_Handler_t para el user boton
+EXTI_Config_t handler_EXTI_Button ={0};
 
 //--------------------------USART-------------------------------
-//Definimos un elemento del tipo GPIO_Handler_t (Struct) y USART_Handler_t para el uso del USB
-GPIO_Handler_t handler_GPIO_USB = {0};
-USART_Handler_t handler_USB = {0};
-//Variable que regula el tiempo de impresion
-uint8_t conMg = 1;
-//Definimos string
-char sendMg[] = "Boton presionado \n";
+GPIO_Handler_t handler_GPIO_USB = {0};       //Definimos un elemento del tipo GPIO_Handler_t (Struct) y USART_Handler_t para el uso del USB
+USART_Handler_t handler_USART_USB = {0};
+uint8_t conMg = 1;                           //Variable que regula el tiempo de impresion
+char sendMg[] = "Boton presionado \n";       //Definimos string
 char bufferMsg[64] = {0};
 
 //--------------------------PWM-------------------------------
-//Definimos un elemento del tipo GPIO_Handler_t (Struct) y PWM_Handler_t para el uso del PWM
-GPIO_Handler_t handler_GPIO_PWM = {0};
+GPIO_Handler_t handler_GPIO_PWM = {0};       //Definimos un elemento del tipo GPIO_Handler_t (Struct) y PWM_Handler_t para el uso del PWM
 PWM_Handler_t handler_PWM = {0};
-//Variables para cambiar el duttycicle
-uint8_t duttyporc = 10;
+uint8_t duttyporc = 10;                      //Variables para cambiar el duttycicle
 uint8_t estado = 0;
+
+//-------------------------I2C--------------------------
+GPIO_Handler_t handler_GPIO_SCL_Giscopio = {0};   //Definimos un elemento del tipo GPIO_Handler_t (Struct) y I2C_Handler_t para la comunicacion I2C
+GPIO_Handler_t handler_GPIO_SDA_Giscopio = {0};
+I2C_Handler_t handler_I2C_Giscopio = {0};
+uint8_t  coordenada_X = 0;                    //Variable que guarda la coordenada x
 
 int main(void)
 {
 	//Realizamos la configuracuion inicial
 	int_Hardware();
-
 	//Activamos el SysTick
 	config_SysTick_ms(0);
-
 	//Definimos para el PIN un 1 logico,
 	GPIO_writePin (&handler_BlinkyPin, SET);
 
@@ -75,14 +71,17 @@ int main(void)
 			//ese tiempo lo volvemos un string
 			sprintf(bufferMsg,"Tiempo Transcurrido: %lu ms \n",tiempo);
 			//Enviamos por puerto serial dicho string
-			writeMsg(&handler_USB, bufferMsg);
+			writeMsg(&handler_USART_USB, bufferMsg);
 			//reniciamos
 			conMg = 1;
 		}
 		else if(estado==1)
 		{
+			//Cambiamos el porcentaje del dutty
 			updateDuttyCycle(&handler_PWM, duttyporc);
 			estado = 0;
+			//Leemos la coordenada en x del Giroscopio
+			coordenada_X = i2c_ReadSingleRegister(&handler_I2C_Giscopio, 0b100101);
 		}
 		else
 		{
@@ -101,6 +100,7 @@ void int_Hardware(void)
 
 	//-------------------Inicio de Configuracion GPIOx-----------------------
 
+	//---------------------------BlinkyLed--------------------------------
 	//---------------PIN: PA5----------------
 	//Definimos el periferico GPIOx a usar.
 	handler_BlinkyPin.pGPIOx = GPIOA;
@@ -114,6 +114,7 @@ void int_Hardware(void)
 	//Cargamos la configuracion del PIN especifico
 	GPIO_Config(&handler_BlinkyPin);
 
+	//---------------------------USART--------------------------------
 	//---------------PIN: PA2----------------
 	//------------AF7: USART2_TX----------------
 	//Definimos el periferico GPIOx a usar.
@@ -128,6 +129,7 @@ void int_Hardware(void)
 	//Cargamos la configuracion del PIN especifico
 	GPIO_Config(&handler_GPIO_USB);
 
+	//---------------------------PWM--------------------------------
 	//---------------PIN: PB6----------------
 	//------------AF2: TIM4_CH1----------------
 	//Definimos el periferico GPIOx a usar.
@@ -142,22 +144,51 @@ void int_Hardware(void)
 	//Cargamos la configuracion del PIN especifico
 	GPIO_Config(&handler_GPIO_PWM);
 
+	//---------------------------I2C--------------------------------
+	//---------------PIN: PB8----------------
+	//------------AF4: I2C1_SCL----------------
+	//Definimos el periferico GPIOx a usar.
+	handler_GPIO_SCL_Giscopio.pGPIOx = GPIOB;
+	//Definimos el pin a utilizar
+	handler_GPIO_SCL_Giscopio.GPIO_PinConfig.GPIO_PinNumber = PIN_8; 						//PIN_x, 0-15
+	//Definimos la configuracion de los registro para el pin seleccionado
+	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
+	GPIO_PIN_Config(&handler_GPIO_SCL_Giscopio, GPIO_MODE_ALTFN, GPIO_OTYPER_OPENDRAIN, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF4);
+	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
+	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
+	//Cargamos la configuracion del PIN especifico
+	GPIO_Config(&handler_GPIO_SCL_Giscopio);
+
+	//---------------PIN: PB9----------------
+	//------------AF4: I2C1_SDA----------------
+	//Definimos el periferico GPIOx a usar.
+	handler_GPIO_SDA_Giscopio.pGPIOx = GPIOB;
+	//Definimos el pin a utilizar
+	handler_GPIO_SDA_Giscopio.GPIO_PinConfig.GPIO_PinNumber = PIN_9; 						//PIN_x, 0-15
+	//Definimos la configuracion de los registro para el pin seleccionado
+	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
+	GPIO_PIN_Config(&handler_GPIO_SDA_Giscopio, GPIO_MODE_ALTFN, GPIO_OTYPER_OPENDRAIN, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF4);
+	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
+	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
+	//Cargamos la configuracion del PIN especifico
+	GPIO_Config(&handler_GPIO_SDA_Giscopio);
+
 	//-------------------Fin de Configuracion GPIOx-----------------------
 
 	//-------------------Inicio de Configuracion USARTx-----------------------
 
 	//---------------USART2----------------
 	//Definimos el periferico USARTx a utilizar
-	handler_USB.ptrUSARTx = USART2;
+	handler_USART_USB.ptrUSARTx = USART2;
 	//Definimos la configuracion del USART seleccionado
-	handler_USB.USART_Config.USART_mode = USART_MODE_TX ;           //USART_MODE_x  x-> TX, RX, RXTX, DISABLE
-	handler_USB.USART_Config.USART_baudrate = USART_BAUDRATE_9600;  //USART_BAUDRATE_x  x->9600, 19200, 115200
-	handler_USB.USART_Config.USART_parity= USART_PARITY_NONE;       //USART_PARITY_x   x->NONE, ODD, EVEN
-	handler_USB.USART_Config.USART_stopbits=USART_STOPBIT_1;         //USART_STOPBIT_x  x->1, 0_5, 2, 1_5
-	handler_USB.USART_Config.USART_enableIntRX = USART_RX_INTERRUP_DISABLE;   //USART_RX_INTERRUP_x  x-> DISABLE, ENABLE
-	handler_USB.USART_Config.USART_enableIntTX = USART_TX_INTERRUP_DISABLE;   //USART_TX_INTERRUP_x  x-> DISABLE, ENABLE
+	handler_USART_USB.USART_Config.USART_mode = USART_MODE_TX ;           //USART_MODE_x  x-> TX, RX, RXTX, DISABLE
+	handler_USART_USB.USART_Config.USART_baudrate = USART_BAUDRATE_9600;  //USART_BAUDRATE_x  x->9600, 19200, 115200
+	handler_USART_USB.USART_Config.USART_parity= USART_PARITY_NONE;       //USART_PARITY_x   x->NONE, ODD, EVEN
+	handler_USART_USB.USART_Config.USART_stopbits=USART_STOPBIT_1;         //USART_STOPBIT_x  x->1, 0_5, 2, 1_5
+	handler_USART_USB.USART_Config.USART_enableIntRX = USART_RX_INTERRUP_DISABLE;   //USART_RX_INTERRUP_x  x-> DISABLE, ENABLE
+	handler_USART_USB.USART_Config.USART_enableIntTX = USART_TX_INTERRUP_DISABLE;   //USART_TX_INTERRUP_x  x-> DISABLE, ENABLE
 	//Cargamos la configuracion del USART especifico
-	USART_Config(&handler_USB);
+	USART_Config(&handler_USART_USB);
 
 	//-------------------Fin de Configuracion USARTx-----------------------
 
@@ -180,15 +211,15 @@ void int_Hardware(void)
 
 	//---------------PIN: PC13----------------
 	//Definimos el periferico GPIOx a usar.
-	handler_GPIOButton.pGPIOx = GPIOC;
+	handler_GPIO_Button.pGPIOx = GPIOC;
 	//Definimos el pin a utilizar
-	handler_GPIOButton.GPIO_PinConfig.GPIO_PinNumber = PIN_13;
+	handler_GPIO_Button.GPIO_PinConfig.GPIO_PinNumber = PIN_13;
 	//Definimos la posicion del elemento pGIOHandler.
-	handler_EXTIButton.pGPIOHandler = &handler_GPIOButton;
+	handler_EXTI_Button.pGPIOHandler = &handler_GPIO_Button;
 	//Definimos el tipo de flanco
-	handler_EXTIButton.edgeType = EXTERNAL_INTERRUPP_FALLING_EDGE;
+	handler_EXTI_Button.edgeType = EXTERNAL_INTERRUPP_FALLING_EDGE;
 	//Cargamos la configuracion del EXTIx
-	extInt_Config(&handler_EXTIButton);
+	extInt_Config(&handler_EXTI_Button);
 
 	//-------------------Fin de Configuracion EXTIx-----------------------
 
@@ -208,25 +239,37 @@ void int_Hardware(void)
 	startPwmSignal(&handler_PWM);
 
 	//---------------------Fin de Configuracion PWM_Channelx-----------------------
+
+	//-------------------Inicio de Configuracion I2Cx----------------------
+
+	//Definimos el I2Cx a usar
+	handler_I2C_Giscopio.prtI2Cx = I2C1;
+	//Definimos la configuracion para el I2C
+	handler_I2C_Giscopio.modeI2C = I2C_MODE_SM;   //I2C_MODE_x  x->SM,FM
+	handler_I2C_Giscopio.slaveAddress = 41;       //Direccion del Sclave
+	//Cargamos la configuracion
+	i2c_Config(&handler_I2C_Giscopio);
+
+	//---------------------Fin de Configuracion I2Cx----------------------
 }
 //------------------------------Fin Configuracion del microcontrolador------------------------------------------
 
 
 //----------------------------Inicio de la definicion de las funciones ISR---------------------------------------
 
+//-------------------------BlinkyLed--------------------------------
 //Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el TIM2
-//INTERMITENCIA DEL LED2
 void BasicTimer2_Callback(void)
 {
 	GPIOxTooglePin(&handler_BlinkyPin);
 	conMg++;
 }
 
+//-------------------------UserButton--------------------------------
 //Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el EXTI13
-
 void callback_extInt13(void)
 {
-	writeMsg(&handler_USB, sendMg);
+	writeMsg(&handler_USART_USB, sendMg);
 	if(duttyporc<100)
 	{
 		duttyporc++;

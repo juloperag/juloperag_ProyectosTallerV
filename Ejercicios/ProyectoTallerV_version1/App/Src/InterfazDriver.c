@@ -6,6 +6,7 @@
  */
 
 #include <InterfazDriver.h>
+#include <SysTickDriver.h>
 
 //Definicion de variables
 uint8_t boolInterface = 1;       //Variable para el control del ciclo while de la interfaz
@@ -103,6 +104,7 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 		{
 			__NOP();
 		}
+		break;
 	}
 	case 'S':
 	{
@@ -124,6 +126,7 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 		{
 			__NOP();
 		}
+		break;
 	}
 	case 'A':
 	{
@@ -136,6 +139,7 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 		{
 			__NOP();
 		}
+		break;
 	}
 	case 'D':
 	{
@@ -148,12 +152,22 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 		{
 			__NOP();
 		}
+		break;
 	}
-	case '0'||'1'||'2'||'3'||'4'||'5'||'6'||'7'||'8'||'9':
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
 	{
 		wait_Value = 0; 	  //Establecemos un valor falso para la variable de dicho ciclo while
+		break;
 	}
-
 	default:
 	{
 		break;
@@ -185,17 +199,36 @@ void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers)
 	//Ciclo while que se ejecuta durante la configuracion de las cantidades de los recipientes
 	while(boolInterface)
 	{
+		delay_ms(30);		//Breve pausa
 
 		msgInterface(prthandlerUSART); //se envia la seccion establecida
+
+		//Mostramos la cantidad actual deacuerdo a la seccion en que se esta actualmente
+		if(section_Interface==1)
+		{
+			//Enviamos mensaje
+			sprintf(bufferMsg,"%u \n",containers);
+			writeMsg(prthandlerUSART, bufferMsg);
+		}
+		else if(section_Interface==2)
+		{
+			//Enviamos mensaje
+			sprintf(bufferMsg,"%u \n", amount_containers[number_containers]);
+			writeMsg(prthandlerUSART, bufferMsg);
+		}
+		else
+		{
+			__NOP();
+		}
 
 		//Ciclo while que se ejecuta durante una seccion de la interface
 		while(boolsection)
 		{
+
 			//---------------------------seccion 1----------------------------
 			if(section_Interface==1)
 			{
 				//Ciclo while que espera un nuevo caracter leido
-				wait_Value = 1; //Escribimos un valor alto
 				while(wait_Value)
 				{
 					__NOP();
@@ -237,7 +270,6 @@ void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers)
 			else if(section_Interface==2)
 			{
 				//Ciclo while que espera un nuevo caracter leido
-				wait_Value = 1; //Escribimos un valor alto
 				while(wait_Value)
 				{
 					__NOP();
@@ -307,6 +339,8 @@ uint8_t InterfaceEnd(USART_Handler_t *prthandlerUSART)
 		}
 	}
 
+	delay_ms(30);		//Breve pausa
+
 	//verificamos que el caracter es arriba o abajo
 	if(charRead=='W' || charRead=='S')
 	{
@@ -336,7 +370,6 @@ void msgInterface(USART_Handler_t *prthandlerUSART)
 	case 1:
 	{
 		writeMsg(prthandlerUSART, "N° de recipientes: \n");   //Mensaje a enviar en la seccion 1
-		writeMsg(prthandlerUSART, "0 \n");
 
 		break;
 	}
@@ -344,7 +377,6 @@ void msgInterface(USART_Handler_t *prthandlerUSART)
 	{
 		writeMsg(prthandlerUSART, "N° de elementos por recipiente: \n");   //Mensaje a enviar en la seccion 2
 		writeMsg(prthandlerUSART, "Recipiente N°1: \n");
-		writeMsg(prthandlerUSART, "00 \n");
 
 		break;
 	}

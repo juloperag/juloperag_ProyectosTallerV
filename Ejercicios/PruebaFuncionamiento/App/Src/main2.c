@@ -221,7 +221,7 @@ void int_Hardware(void)
 	//Definimos el periferico GPIOx a usar.
 	handler_GPIO_Sensor.pGPIOx = GPIOC;
 	//Definimos el pin a utilizar
-	handler_GPIO_Sensor.GPIO_PinConfig.GPIO_PinNumber = PIN_12;
+	handler_GPIO_Sensor.GPIO_PinConfig.GPIO_PinNumber = PIN_13;
 	//Definimos la posicion del elemento pGIOHandler.
 	handler_EXTI_Sensor.pGPIOHandler = &handler_GPIO_Sensor;
 	//Definimos el tipo de flanco
@@ -262,17 +262,11 @@ void BasicTimer2_Callback(void)
 
 }
 
-void callback_extInt12(void)
+void callback_extInt13(void)
 {
-	contador++;
-	if(contador == cantidad[i])
-	{
-		movstate = 0;
-	}
-	else
-	{
-		__NOP();
-	}
+
+	movstate = 0;
+
 }
 
 void BasicUSART2_Callback(void)
@@ -290,7 +284,7 @@ void Control_MPP(void)
 	for(int u=0; u<21; u++)
 	{
 		GPIOxTooglePin(&handler_GPIO_MPP);
-		delay_ms(10);
+		delay_ms(20);
 	}
 }
 
@@ -299,11 +293,11 @@ void Control_Servo(uint8_t pos)
 {
 	if(pos==1)
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 7);
+		updateDuttyCycle(&handler_PWM_Servo, 5);
 	}
 	else if(pos==2)
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 5);
+		updateDuttyCycle(&handler_PWM_Servo, 7);
 	}
 	else
 	{

@@ -216,9 +216,9 @@ void int_Hardware(void)
 
 	//---------------PIN: PB3----------------
 	//Definimos el periferico GPIOx a usar.
-	handler_GPIO_Fila5.pGPIOx = GPIOB;
+	handler_GPIO_Fila5.pGPIOx = GPIOA;
 	//Definimos el pin a utilizar
-	handler_GPIO_Fila5.GPIO_PinConfig.GPIO_PinNumber = PIN_3; 						//PIN_x, 0-15
+	handler_GPIO_Fila5.GPIO_PinConfig.GPIO_PinNumber = PIN_10; 						//PIN_x, 0-15
 	//Definimos la configuracion de los registro para el pin seleccionado
 	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
 	GPIO_PIN_Config(&handler_GPIO_Fila5, GPIO_MODE_OUT, GPIO_OTYPER_PUSHPULL, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF0);
@@ -301,9 +301,9 @@ void int_Hardware(void)
 	//Cargamos la configuracion del EXTIx
 	extInt_Config(&handler_EXTI_Column3);
 
-	//---------------PIN: PC3----------------
+	//---------------PIN: PB3----------------
 	//Definimos el periferico GPIOx a usar.
-	handler_GPIO_Column4.pGPIOx = GPIOC;
+	handler_GPIO_Column4.pGPIOx = GPIOB;
 	//Definimos el pin a utilizar
 	handler_GPIO_Column4.GPIO_PinConfig.GPIO_PinNumber = PIN_3;
 	//Definimos la posicion del elemento pGIOHandler.
