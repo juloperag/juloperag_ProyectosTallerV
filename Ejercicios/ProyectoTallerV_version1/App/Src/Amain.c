@@ -113,26 +113,44 @@ int main(void)
 		GPIO_writePin (&handler_GPIO_Buzzer, SET);
 		delay_ms(2000);
 		GPIO_writePin (&handler_GPIO_Buzzer, RESET);
-		delay_ms(1000);
+		delay_ms(250);
 
 		//---------------------Operacion de separacion-----------------------------------
 		GPIO_writePin (&handler_GPIO_MPP_DIR, RESET); //Definimos el sentido de giro
 		boolOperacion = 1; //se define un valor alto
+		movState = 1; //se define un valor alto
 		pos_canRec = 0; //Se define la primera pocision
 
 		while(boolOperacion)
 		{
+
 			/*El brazo del servo se establece x grados, con lo cual el sistema de transmision se engancha
 			 * con el engranaje del Disco Superior.
 			*/
 			control_Servo(1);
 			delay_ms(2000);
+			//Se envia el mensaje que indica en que recipiente esta la operacion
+			InterfaceOperation(&handler_USB, 1, pos_canRec, 0);
+			 //Variable que guarda el valor anterior a la cantidad de elementos que pasa delante del sensor
+			uint8_t cantidadAnt = 1;
 
-			movState = 1; //se define un valor alto
 			//El MPP se mueve cada 10 pasos por cada ciclo While. Se detiene cuando se cumpla la cantidad deseada de elementos.
 			while(movState)
 			{
 				control_MPP();
+				if (contador!=cantidadAnt)
+				{
+					//Se muestra la cantidad faltante de elmentos para el respectivo recipiente
+					InterfaceOperation(&handler_USB, 2, pos_canRec, (canRecipiente[pos_canRec]-contador));
+					//Guardamos la cantidad actual de elemntos contados
+					cantidadAnt = contador;
+				}
+				else
+				{
+					__NOP();
+				}
+				//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
+				InterfaceOperation(&handler_USB, 3, pos_canRec, 0);
 			}
 			movState = 1; //se define un valor alto
 
@@ -145,9 +163,11 @@ int main(void)
 				delay_ms(2000);
 
 				//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
-				for(uint8_t u=0; u<6; u++)
+				for(uint8_t u=1; u<6; u++)
 				{
 					control_MPP();
+					//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
+					InterfaceOperation(&handler_USB, 3, pos_canRec, 0);
 				}
 				//Cambiamos la poscion de la cantidad a la siguiente
 				pos_canRec++;
@@ -164,10 +184,10 @@ int main(void)
 		GPIO_writePin (&handler_GPIO_Buzzer, SET);
 		delay_ms(2000);
 		GPIO_writePin (&handler_GPIO_Buzzer, RESET);
-		delay_ms(1000);
+		delay_ms(250);
 
-		//-------------------Interfaz Inicial + Movimiento Disco Inferior-----------------------------------
-		//Cargamso la posicion final de los recipiente al number_Containers
+		//-------------------Interfaz Final + Movimiento Disco Inferior-----------------------------------
+		//Cargamos la posicion de los recipiente al number_Containers
 		definenumberContainers(pos_canRec);
 		/*El brazo del servo se establece 0 grados, con lo cual el sistema de transmision se engancha
 		* con el engranaje del Disco Inferior.
@@ -176,6 +196,7 @@ int main(void)
 		delay_ms(2000);
 		//Definimos una variable para guardad la posicion de los recipientes anteriores
 		uint8_t posant_Recipiente = pos_canRec;
+		boolInterfaceEnd = 1;  //Establecemos un valor alto
 
 		//Ciclo while de la interfaz final
 		while(boolInterfaceEnd)
@@ -197,21 +218,25 @@ int main(void)
 				{
 					GPIO_writePin (&handler_GPIO_MPP_DIR, SET); //Definimos el sentido de giro
 					//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
-					for(uint8_t u=0; u<6; u++)
+					for(uint8_t u=1; u<6; u++)
 					{
 						control_MPP();
+						//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
+						InterfaceOperation(&handler_USB, 3, pos_canRec, 0);
 					}
 
 					posant_Recipiente=pos_Recipiente;
 				}
-				if(pos_Recipiente>posant_Recipiente)
+				else if(pos_Recipiente>posant_Recipiente)
 				{
 					//veficamos si el valor definido de la posicion actual de los recipientes aunmento
 					GPIO_writePin (&handler_GPIO_MPP_DIR, RESET); //Definimos el sentido de giro
 					//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
-					for(uint8_t u=0; u<6; u++)
+					for(uint8_t u=1; u<6; u++)
 					{
 						control_MPP();
+						//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
+						InterfaceOperation(&handler_USB, 3, pos_canRec, 0);
 					}
 					posant_Recipiente=pos_Recipiente;
 				}
@@ -221,9 +246,9 @@ int main(void)
 				}
 			}
 		}
-		//Reiniciamos el valor de la variable
-		boolInterfaceEnd = 1;
+
 	}
+
 	return 0;
 }
 
@@ -489,7 +514,7 @@ void int_Hardware(void)
 	//Definimos la posicion del elemento pGIOHandler.
 	handler_EXTI_Sensor.pGPIOHandler = &handler_GPIO_Sensor;
 	//Definimos el tipo de flanco
-	handler_EXTI_Sensor.edgeType = EXTERNAL_INTERRUPP_RISING_EDGE;
+	handler_EXTI_Sensor.edgeType = EXTERNAL_INTERRUPP_FALLING_EDGE;
 	//Cargamos la configuracion del EXTIx
 	extInt_Config(&handler_EXTI_Sensor);
 
@@ -504,7 +529,7 @@ void int_Hardware(void)
 	handler_PWM_Servo.config.periodcnt = BTIMER_PCNT_1us; //BTIMER_PCNT_xus x->1,10,100/ BTIMER_PCNT_1ms
 	handler_PWM_Servo.config.periodo = 20000;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	handler_PWM_Servo.config.channel = PWM_CHANNEL_1;     //PWM_CHANNEL_x x->1,2,3,4
-	handler_PWM_Servo.config.duttyCicle = 5;             //Valor entre 0-100 [%]
+	handler_PWM_Servo.config.duttyCicle = 7;             //Valor entre 0-100 [%]
 	//Cargamos la configuracion
 	pwm_Config(&handler_PWM_Servo);
 	//Activar el TIMER y con ello el PWM
@@ -588,10 +613,13 @@ void callback_extInt3(void)
 //Definimos la funcion que se desean ejecutar cuando se genera la interrupcion por el EXTI12
 void callback_extInt12(void)
 {
+	//Variable que se incrementa cada vez que sucede una interrupcion
 	contador++;
 
-	if(contador<canRecipiente[pos_canRec])
+	//Verificamos si ya se cumplio la cantidad establecidad
+	if(canRecipiente[pos_canRec]<=contador)
 	{
+		//Reinicio de variables
 		contador = 0;
 		movState= 0;
 	}
@@ -608,16 +636,18 @@ void callback_extInt12(void)
 //Funcion para generar un paso del motor paso a paso
 void control_MPP(void)
 {
+	//Se genera unda onda cuadrada con un periodo de 40 ms
 	for(int u=0; u<21; u++)
 	{
 		GPIOxTooglePin(&handler_GPIO_MPP);
-		delay_ms(10);
+		delay_ms(20);
 	}
 }
 
 //Funcion para control de servomotor
 void control_Servo(uint8_t pos)
 {
+	//Deacuerdo a la posicion se establece un valor de ductty diferente
 	if(pos==1)
 	{
 		updateDuttyCycle(&handler_PWM_Servo, 7);

@@ -9,6 +9,7 @@
 #include <SysTickDriver.h>
 
 //Definicion de variables
+uint8_t stopOperation = 0;       //Variable para el control del ciclo while de la parada de la operacion
 uint8_t boolInterface = 1;       //Variable para el control del ciclo while de la interfaz
 uint8_t boolsection = 1;         //Variable para el control del ciclo while de la seccion
 uint8_t wait_Value = 1;          //Variable para el control del ciclo while de nuevo caracter leido
@@ -61,7 +62,14 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 		}
 		else
 		{
-			section_Interface++;         //Sumamos a la variable de la seccion
+			if(section_Interface==3)
+			{
+				section_Interface++;         //Sumamos a la variable de la seccion
+			}
+			else
+			{
+				__NOP();
+			}
 			wait_Value = 0;              //Establecemos un valor falso para la variable de dicho ciclo while
 			boolsection = 0;
 			boolInterface = 0;
@@ -154,6 +162,34 @@ void executeChar(USART_Handler_t *prthandlerUSART, char data)
 		}
 		break;
 	}
+	case 'F':
+	{
+		if(section_Interface==4)
+		{
+			stopOperation=1;   //cambiamos el valor a 1
+			writeMsg(prthandlerUSART, "Proceso Interrumpido \n");  //Enviamos mensaje
+		}
+		else
+		{
+			__NOP();
+		}
+
+		break;
+	}
+	case 'G':
+	{
+		if(section_Interface==4)
+		{
+			stopOperation=0;   //cambiamos el valor a cero
+			writeMsg(prthandlerUSART, "Proceso en Ejecucion \n");  //Enviamos mensaje
+		}
+		else
+		{
+			__NOP();
+		}
+
+		break;
+	}
 	case '0':
 	case '1':
 	case '2':
@@ -181,6 +217,7 @@ void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers)
 	char bufferMsg[10] = {0};  //Arreglo que guarda el mensaje a enviar por USART
 
 	//Restablecemos los valores predeterminados
+	stopOperation = 0;
 	boolInterface = 1;
 	boolsection = 1;
 	wait_Value = 1;
@@ -321,6 +358,44 @@ void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers)
 	}
 }
 
+//Funcion que ejecuta interfaz de operacion
+void InterfaceOperation(USART_Handler_t *prthandlerUSART, uint8_t caseOper, uint8_t position, uint8_t missing)
+{
+	char bufferMsg[10] = {0};  //Arreglo que guarda el mensaje a enviar por USART
+
+	switch(caseOper)
+	{
+	case 0:
+	{
+		//Cargamos la posicion de los recipiente al number_Containers
+		definenumberContainers(position);
+		//mostramos el recipiente actual
+		msgContainers(prthandlerUSART);
+
+		break;
+	}
+	case 1:
+	{
+		//Mostramos la cantidad faltante de elementos para el especifico recipiente
+		sprintf(bufferMsg,"%u \n", missing);
+		writeMsg(prthandlerUSART, bufferMsg);
+
+		break;
+	}
+	case 3:
+	{
+		while(stopOperation)
+		{
+			__NOP();
+		}
+	}
+	default:
+	{
+		break;
+	}
+	}
+}
+
 //Funcion que ejecuta la interfaz final de usuario
 uint8_t InterfaceEnd(USART_Handler_t *prthandlerUSART)
 {
@@ -338,8 +413,6 @@ uint8_t InterfaceEnd(USART_Handler_t *prthandlerUSART)
 			__NOP();
 		}
 	}
-
-	delay_ms(30);		//Breve pausa
 
 	//verificamos que el caracter es arriba o abajo
 	if(charRead=='W' || charRead=='S')

@@ -16,6 +16,7 @@
 //Definimos las cabeceras para el uso de la interfaz de usuario
 void executeChar(USART_Handler_t *prthandlerUSART, char data);
 void InterfaceStart(USART_Handler_t *prthandlerUSART,uint8_t *amount_containers);
+void InterfaceOperation(USART_Handler_t *prthandlerUSART, uint8_t caseOper, uint8_t position, uint8_t missing);
 uint8_t InterfaceEnd(USART_Handler_t *prthandlerUSART);
 void msgInterface(USART_Handler_t *prthandlerUSART);
 void msgContainers(USART_Handler_t *prthandlerUSART);
