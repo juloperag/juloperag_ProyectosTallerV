@@ -365,7 +365,7 @@ void InterfaceOperation(USART_Handler_t *prthandlerUSART, uint8_t caseOper, uint
 
 	switch(caseOper)
 	{
-	case 0:
+	case 1:
 	{
 		//Cargamos la posicion de los recipiente al number_Containers
 		definenumberContainers(position);
@@ -374,7 +374,7 @@ void InterfaceOperation(USART_Handler_t *prthandlerUSART, uint8_t caseOper, uint
 
 		break;
 	}
-	case 1:
+	case 2:
 	{
 		//Mostramos la cantidad faltante de elementos para el especifico recipiente
 		sprintf(bufferMsg,"%u \n", missing);
@@ -419,6 +419,7 @@ uint8_t InterfaceEnd(USART_Handler_t *prthandlerUSART)
 	{
 		//Enviamos mensajes
 		msgContainers(prthandlerUSART);
+		charRead = '\0'; //Reiniciamos la variable
 	}
 
 	else

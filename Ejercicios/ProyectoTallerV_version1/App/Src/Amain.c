@@ -120,6 +120,7 @@ int main(void)
 		boolOperacion = 1; //se define un valor alto
 		movState = 1; //se define un valor alto
 		pos_canRec = 0; //Se define la primera pocision
+		contador = 0;   //Reiniciamos la variable
 
 		while(boolOperacion)
 		{
@@ -132,7 +133,7 @@ int main(void)
 			//Se envia el mensaje que indica en que recipiente esta la operacion
 			InterfaceOperation(&handler_USB, 1, pos_canRec, 0);
 			 //Variable que guarda el valor anterior a la cantidad de elementos que pasa delante del sensor
-			uint8_t cantidadAnt = 1;
+			uint8_t cantidadAnt = contador+1;
 
 			//El MPP se mueve cada 10 pasos por cada ciclo While. Se detiene cuando se cumpla la cantidad deseada de elementos.
 			while(movState)
@@ -153,6 +154,7 @@ int main(void)
 				InterfaceOperation(&handler_USB, 3, pos_canRec, 0);
 			}
 			movState = 1; //se define un valor alto
+			contador = 0;   //Reiniciamos la variable
 
 			if(pos_canRec<(amountContainers()-1))
 			{
@@ -196,6 +198,7 @@ int main(void)
 		delay_ms(2000);
 		//Definimos una variable para guardad la posicion de los recipientes anteriores
 		uint8_t posant_Recipiente = pos_canRec;
+		tecla='\0';             //Reiniciamos la variable
 		boolInterfaceEnd = 1;  //Establecemos un valor alto
 
 		//Ciclo while de la interfaz final
@@ -619,8 +622,7 @@ void callback_extInt12(void)
 	//Verificamos si ya se cumplio la cantidad establecidad
 	if(canRecipiente[pos_canRec]<=contador)
 	{
-		//Reinicio de variables
-		contador = 0;
+		//Reinicio de la variable
 		movState= 0;
 	}
 	else
@@ -650,11 +652,11 @@ void control_Servo(uint8_t pos)
 	//Deacuerdo a la posicion se establece un valor de ductty diferente
 	if(pos==1)
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 7);
+		updateDuttyCycle(&handler_PWM_Servo, 5);
 	}
 	else if(pos==2)
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 5);
+		updateDuttyCycle(&handler_PWM_Servo, 7);
 	}
 	else
 	{
