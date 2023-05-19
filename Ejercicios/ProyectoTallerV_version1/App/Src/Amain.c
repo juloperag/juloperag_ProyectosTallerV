@@ -122,6 +122,9 @@ int main(void)
 		pos_canRec = 0; //Se define la primera pocision
 		contador = 0;   //Reiniciamos la variable
 
+		//Enviamos un mensaje que indica el inicio de la Separacion de elementos
+		writeMsg(&handler_USB, "Separacion de Elementos \n");  //Enviamos mensaje
+
 		while(boolOperacion)
 		{
 
@@ -200,6 +203,11 @@ int main(void)
 		uint8_t posant_Recipiente = pos_canRec;
 		tecla='\0';             //Reiniciamos la variable
 		boolInterfaceEnd = 1;  //Establecemos un valor alto
+
+		//Enviamos un mensaje que indica el inicio de la seleccion
+		writeMsg(&handler_USB, "Seleccion de recipientes \n");  //Enviamos mensaje
+		//Se envia el mensaje que indica en que recipiente se seleccion
+		InterfaceOperation(&handler_USB, 1, pos_canRec, 0);
 
 		//Ciclo while de la interfaz final
 		while(boolInterfaceEnd)
@@ -639,10 +647,10 @@ void callback_extInt12(void)
 void control_MPP(void)
 {
 	//Se genera unda onda cuadrada con un periodo de 40 ms
-	for(int u=0; u<21; u++)
+	for(int u=1; u<21; u++)
 	{
 		GPIOxTooglePin(&handler_GPIO_MPP);
-		delay_ms(20);
+		delay_ms(12);
 	}
 }
 
@@ -652,11 +660,11 @@ void control_Servo(uint8_t pos)
 	//Deacuerdo a la posicion se establece un valor de ductty diferente
 	if(pos==1)
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 5);
+		updateDuttyCycle(&handler_PWM_Servo, 6);
 	}
 	else if(pos==2)
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 7);
+		updateDuttyCycle(&handler_PWM_Servo, 8);
 	}
 	else
 	{

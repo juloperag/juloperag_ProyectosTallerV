@@ -235,9 +235,9 @@ void i2c_WriteSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead, ui
 	//2. Enviamos la direccion del Sclavo e indicamos que se desea escribir el Sclave
 	i2c_SendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_WRITE_DATA);
 	//3. Enviamos la direccion de memoria que deseamos escribir
-	i2c_SendMemoryAddress(ptrHandlerI2C, newValue);
+	i2c_SendMemoryAddress(ptrHandlerI2C, regToRead);
 	//4. Enviamos el dato que se desea escribir en el Sclave
-	i2c_SendDataByte(ptrHandlerI2C, regToRead);
+	i2c_SendDataByte(ptrHandlerI2C, newValue);
 	//5. Generamos la condicion de Stop
 	i2c_StopTrasaction(ptrHandlerI2C);
 }

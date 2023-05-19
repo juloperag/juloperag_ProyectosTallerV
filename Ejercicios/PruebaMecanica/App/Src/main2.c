@@ -234,11 +234,11 @@ void Control_Servo(uint8_t dato)
 {
 	if(dato=='2')
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 7);
+		updateDuttyCycle(&handler_PWM_Servo, 8);
 	}
 	else if(dato=='3')
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 5);
+		updateDuttyCycle(&handler_PWM_Servo, 6);
 	}
 	else
 	{
