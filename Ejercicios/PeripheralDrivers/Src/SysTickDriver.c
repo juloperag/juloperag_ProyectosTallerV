@@ -5,7 +5,6 @@
  *      Author: julian
  */
 
-#include <stm32f4xx.h>
 #include <SysTickDriver.h>
 
 //Variables para el uso del Systick
