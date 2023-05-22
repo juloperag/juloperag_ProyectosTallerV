@@ -6,6 +6,7 @@
  */
 
 #include <SysTickDriver.h>
+#include <PLLDriver.h>
 
 //Variables para el uso del Systick
 uint64_t ticks = 0;
@@ -21,28 +22,31 @@ void config_SysTick_ms(uint8_t systemClock)
 	/*Cargamos el valor del limite de incrementos que representa 1ms
 	 * Depende de la señal de reloj interno del MCU
 	 */
-	switch(systemClock)
-	{
-	//Caso para el reloj HSI -> 16Mhz
-	case 0:
-	{
-		SysTick->LOAD = SYSRICK_LOAD_VALUE_16MHz_1ms;
-		break;
-	}
-	//Caso para el reloj HSI -> 100Mhz
-	case 1:
-	{
-		SysTick->LOAD = SYSRICK_LOAD_VALUE_100MHz_1ms;
-		break;
-	}
-	//El caso por defecto sera de 16Mhz
-	default:
-	{
-		SysTick->LOAD = SYSRICK_LOAD_VALUE_16MHz_1ms;
 
-		break;
-	}
-	}
+	uint8_t clock = getConfigPLL();  	     //Obtenemos la velocidad de reloj del sistema
+	SysTick->LOAD = clock*1000;              //Cargamos el valor correspondiente a 1 ms
+//	switch(systemClock)
+//	{
+//	//Caso para el reloj HSI -> 16Mhz
+//	case 0:
+//	{
+//		SysTick->LOAD = SYSRICK_LOAD_VALUE_16MHz_1ms;
+//		break;
+//	}
+//	//Caso para el reloj HSI -> 100Mhz
+//	case 1:
+//	{
+//		SysTick->LOAD = SYSRICK_LOAD_VALUE_100MHz_1ms;
+//		break;
+//	}
+//	//El caso por defecto sera de 16Mhz
+//	default:
+//	{
+//		SysTick->LOAD = SYSRICK_LOAD_VALUE_16MHz_1ms;
+//
+//		break;
+//	}
+//	}
 
 	//Limpiamos el valor actual del Systick
 	SysTick->VAL = 0;

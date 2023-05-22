@@ -83,6 +83,7 @@ typedef struct
 
 //Definicion de las cabeceras de las funciones para el uso del USART
 void USART_Config(USART_Handler_t *ptrUsartHandler);
+uint8_t getValueBaudRate(uint8_t fck, uint32_t baudRate);
 void writeChar(USART_Handler_t *ptrUsartHandlerWrite, uint8_t datatoSend);
 void writeMsg(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend);
 uint8_t getRxData(void);

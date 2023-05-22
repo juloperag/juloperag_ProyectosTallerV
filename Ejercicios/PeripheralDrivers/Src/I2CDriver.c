@@ -6,7 +6,7 @@
  */
 
 #include <I2CDriver.h>
-
+#include <PLLDriver.h>
 
 /*
  * Recordar de configurar los pines GPIOx por medio de las funciones alternativas,
@@ -15,6 +15,8 @@
 
 void i2c_Config(I2C_Handler_t *ptrHandlerI2C)
 {
+	uint8_t clockAPB1 = getClockAPB1();     //Variable que guarda la velocidad de reloj entregada al bus APB1
+
 	//---------------------------------1) Activamos el periferico------------------------------------------
 	//Registro: APB1ENR
 
@@ -48,11 +50,15 @@ void i2c_Config(I2C_Handler_t *ptrHandlerI2C)
 	//Registro: CR2
 
 	ptrHandlerI2C->prtI2Cx->CR2 &= ~(0b111111<<I2C_CR2_FREQ_Pos);
-	ptrHandlerI2C->prtI2Cx->CR2 |= (MAIN_CLOCK_16_MHZ_FOR_I2C<<I2C_CR2_FREQ_Pos);
+	ptrHandlerI2C->prtI2Cx->CR2 |= (clockAPB1<<I2C_CR2_FREQ_Pos);
 
 	//-------------------------------------4) Configuracion del I2C------------------------------------------
 	//Registro: CCR
 	//Registro: TRISE
+
+	//Variables que almacenan el respectivo valor a cargar en los registros CRR y Trise
+	uint16_t valueCRR = 0;
+	uint8_t valueTrise = 0;
 
 	//definimos inicialmente los registro en 0
 	ptrHandlerI2C->prtI2Cx->CCR = 0;
@@ -63,20 +69,28 @@ void i2c_Config(I2C_Handler_t *ptrHandlerI2C)
 	{
 		//Seleccionamos el modo estandar
 		ptrHandlerI2C->prtI2Cx->CCR &= ~I2C_CCR_FS;
+
 		//Definimos la señal de reloj
-		ptrHandlerI2C->prtI2Cx->CCR |= (I2C_MODE_SM_SPEED_100KHz<<I2C_CCR_CCR_Pos);
+		valueCRR = (5000*clockAPB1)/1000;
+		ptrHandlerI2C->prtI2Cx->CCR |= (valueCRR<<I2C_CCR_CCR_Pos);
+
 		//Definimos el tiempo maximo en el T-RIse
-		ptrHandlerI2C->prtI2Cx->TRISE |= I2C_MAX_RISE_TIME_SM;
+		valueTrise = ((1000*clockAPB1)/1000)+1;
+		ptrHandlerI2C->prtI2Cx->TRISE |= valueTrise;
 	}
 	else
 	{
 		//Seleccionamos el modo Fast
 		ptrHandlerI2C->prtI2Cx->CCR &= ~I2C_CCR_FS;
 		ptrHandlerI2C->prtI2Cx->CCR |= I2C_CCR_FS;
+
 		//Definimos la señal de reloj
-		ptrHandlerI2C->prtI2Cx->CCR |= (I2C_MODE_FM_SPEED_400KHz<<I2C_CCR_CCR_Pos);
+		valueCRR = (2500*clockAPB1)/3000;
+		ptrHandlerI2C->prtI2Cx->CCR |= (valueCRR<<I2C_CCR_CCR_Pos);
+
 		//Definimos el tiempo maximo en el T-RIse
-		ptrHandlerI2C->prtI2Cx->TRISE |= I2C_MAX_RISE_TIME_FM;
+		valueTrise = ((300*clockAPB1)/1000)+1;
+		ptrHandlerI2C->prtI2Cx->TRISE |= valueTrise;
 	}
 
 	//-----------------------------------5) Activamos el modulo I2C------------------------------------------

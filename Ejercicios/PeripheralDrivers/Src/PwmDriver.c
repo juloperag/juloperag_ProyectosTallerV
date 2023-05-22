@@ -6,6 +6,7 @@
  */
 
 #include <PwmDriver.h>
+#include <PLLDriver.h>
 
 void pwm_Config(PWM_Handler_t *prtPwmHandler)
 {
@@ -221,13 +222,15 @@ void enableOutput(PWM_Handler_t *prtPwmHandler)
 //se estable la frecuencia del PWM
 void setFrequency(PWM_Handler_t *prtPwmHandler)
 {
+	uint8_t clock = getClockAPB1();          //Guardamos la velocidad de reloj entregada al bus APB1
+
 	/*La frecuencia de reloj contador CK_CNT es igual a fck_psc/(psc[15:0]+1)
 	* por tanto define la velocidad a la que incrementa el counter y con ello la del TIMER*/
-	prtPwmHandler->ptrTIMx->PSC = 16*(prtPwmHandler->config.periodcnt)-1; //(min:0, max:65536)
+	prtPwmHandler->ptrTIMx->PSC = clock*(prtPwmHandler->config.periodcnt)-1; //(min:0, max:65536)
 	/*Cargamos el valor del ARR el cual es e limite de incrementos del TIMER
 	 * antes de hacer una update y reload
 	 */
-	prtPwmHandler->ptrTIMx->ARR = prtPwmHandler->config.periodo;
+	prtPwmHandler->ptrTIMx->ARR = prtPwmHandler->config.periodo+1;
 }
 
 //Actualizamos la frecuencia del PWM

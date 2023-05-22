@@ -5,6 +5,7 @@
  */
 
 #include <BasicTimer.h>
+#include <PLLDriver.h>
 
 //Variable que guarda la referencia del periferico a utilizar
 TIM_TypeDef *ptrTimer2Used;
@@ -65,9 +66,11 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler)
 	//------------------------------2) Configurando el pre-escaler-----------------------------------------
 	//Registro:TIMx_PSC		//Es un valor de 32 bit
 
+	uint8_t clock = getClockAPB1();          //Guardamos la velocidad de reloj entregada al bus APB1
+
 	/*La frecuencia de reloj contador CK_CNT es igual a fck_psc/(psc[15:0]+1)
 	 * por tanto define la velocidad a la que incrementa el counter*/
-	ptrBTimerHandler->ptrTIMx->PSC = 16*(ptrBTimerHandler->TIMx_Config.TIMx_periodcnt)-1; //(min:0, max:65536)
+	ptrBTimerHandler->ptrTIMx->PSC = clock*(ptrBTimerHandler->TIMx_Config.TIMx_periodcnt)-1; //(min:0, max:65536)
 
 	//----------------------3) Configurando de la direccion del counter(up/down)---------------------------
 	//Registro:TIMx_CR1		Es un registro de configuracion del TIMx
@@ -80,7 +83,7 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler)
 		//-------a)Definimos la direccion para el conteo-------------
 		ptrBTimerHandler->ptrTIMx->CR1 &= ~(0b1<<4);
 		//-------b)Configuracion del Auto-Reload---------------------
-		ptrBTimerHandler->ptrTIMx->ARR = ptrBTimerHandler->TIMx_Config.TIMX_period;
+		ptrBTimerHandler->ptrTIMx->ARR = ptrBTimerHandler->TIMx_Config.TIMX_period+1;
 		//-------c)Reinicio del registro counter----------------------
 		ptrBTimerHandler->ptrTIMx->CNT = 0;
 	}

@@ -5,8 +5,9 @@
  *      Author: julian
  */
 
-#include <stm32f4xx.h>
-#include "USARTxDriver.h"
+#include <USARTxDriver.h>
+#include <PLLDriver.h>
+
 //Se cuenta con 3 USART: USART1, USART2, USART6
 
 //Variable que guarda la referencia del periferico a utilizar
@@ -138,38 +139,32 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 	//-------------------5) Configuracion del Baudrate(Velocidad de Trans o Rec)-------------------------
 	//Registro: BRR       //Numero de 32 bits
 
+	uint8_t clock = 0;
+
+	if(ptrUsartHandler->ptrUSARTx == USART2)
+	{
+		clock = getClockAPB1();          //Guardamos la velocidad de reloj entregada al bus APB1
+	}
+	else
+	{
+		clock = getConfigPLL();	         //Guardamos la velocidad de reloj del sistema
+	}
+
+	//Verificamos el Baud Rate selecionado
 	if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_9600)
 	{
-		//Velocidad de 9600bps
-		/*El valor a cargar es 104.1875
-		 * Mantiza = 104 = 0x68
-		 * fraction = 16*0.1875 = 3
-		 * Valor a cargar 0x0683
-		 */
 		//Se carga el valor de la velocidad en el registro
-		ptrUsartHandler->ptrUSARTx->BRR = 0x0683;
+		ptrUsartHandler->ptrUSARTx->BRR = getValueBaudRate(clock, 9600);
 	}
 	else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_19200)
 	{
-		//Velocidad de 19200bps
-		/*El valor a cargar es 52.0625
-		 * Mantiza = 52 = 0x34
-		 * fraction = 16*0.0625 = 1
-		 * Valor a cargar 0x0341
-		 */
 		//Se carga el valor de la velocidad en el registro
-		ptrUsartHandler->ptrUSARTx->BRR = 0x0341;
+		ptrUsartHandler->ptrUSARTx->BRR = getValueBaudRate(clock, 19200);
 	}
 	else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_115200)
 		{
-		//Velocidad de 115200bps
-		/*El valor a cargar es 8.6875
-		 * Mantiza = 8 = 0x08
-		 * fraction = 16*0.6875 = 11
-		 * Valor a cargar 0x008B
-		 */
 		//Se carga el valor de la velocidad en el registro
-		ptrUsartHandler->ptrUSARTx->BRR = 0x008B;
+		ptrUsartHandler->ptrUSARTx->BRR = getValueBaudRate(clock, 115200);
 	}
 	else
 	{
@@ -250,12 +245,12 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 	//Se selecciono la interrupcion para TX
 	if(ptrUsartHandler->USART_Config.USART_enableIntTX ==  USART_TX_INTERRUP_ENABLE)
 	{
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
-		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TXEIE;
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TCIE;
+		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TCIE;
 	}
 	else
 	{
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TCIE;
 	}
 
 
@@ -292,6 +287,18 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_UE;
 		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_UE;
 	}
+}
+
+//Funcion para calcular el valor correspondiente a ingresar en el BRR
+uint8_t getValueBaudRate(uint8_t fck, uint32_t baudRate)
+{
+    uint32_t usartDiv = (fck*10000000000)/(16*baudRate);
+    uint32_t mantiza = usartDiv/10000;
+    uint32_t decimal = usartDiv-mantiza*10000;
+    uint8_t div_Fraction = (decimal)/625;
+    uint16_t value  = mantiza<<USART_BRR_DIV_Mantissa_Pos | div_Fraction;
+
+    return value;
 }
 
 //Funcion para escribir un solo char
@@ -361,11 +368,23 @@ void USART1_IRQHandler(char data)
 	//Confirmamos que el registro RXNE esta activo
 	if(ptrUSART1Used->SR & USART_SR_RXNE)
 	{
-	//Leemos el registro DR del respectivo USART
-	auxRxData = ptrUSART1Used->DR;
-	//Llamanos a la funcion de interrupcion
-	BasicUSART1_Callback();
+		//Leemos el registro DR del respectivo USART
+		auxRxData = (uint8_t) ptrUSART1Used->DR;
+		//Llamanos a la funcion de interrupcion
+		BasicUSART1_Callback();
 	}
+	else if (ptrUSART1Used->SR & USART_SR_TC)
+	{
+		//Limpiamos la bandera
+		ptrUSART1Used->SR &= ~USART_SR_TC;
+		//Llamanos a la funcion de interrupcion
+		BasicUSART1_Callback();
+	}
+	else
+	{
+		__NOP();
+	}
+
 
 }
 
@@ -374,10 +393,21 @@ void USART2_IRQHandler(char data)
 	//Confirmamos que el registro RXNE esta activo
 	if(ptrUSART2Used->SR & USART_SR_RXNE)
 	{
-	//Leemos el registro DR del respectivo USART
-	auxRxData = ptrUSART2Used->DR;
-	//Llamanos a la funcion de interrupcion
-	BasicUSART2_Callback();
+		//Leemos el registro DR del respectivo USART
+		auxRxData = (uint8_t) ptrUSART2Used->DR;
+		//Llamanos a la funcion de interrupcion
+		BasicUSART2_Callback();
+	}
+	else if (ptrUSART2Used->SR & USART_SR_TC)
+	{
+		//Limpiamos la bandera
+		ptrUSART2Used->SR &= ~USART_SR_TC;
+		//Llamanos a la funcion de interrupcion
+		BasicUSART2_Callback();
+	}
+	else
+	{
+		__NOP();
 	}
 }
 
@@ -386,9 +416,21 @@ void USART6_IRQHandler(void)
 	//Confirmamos que el registro RXNE esta activo
 	if(ptrUSART6Used->SR & USART_SR_RXNE)
 	{
-	//Leemos el registro DR del respectivo USART
-	auxRxData = ptrUSART6Used->DR;
-	//Llamanos a la funcion de interrupcion
-	BasicUSART6_Callback();
+		//Leemos el registro DR del respectivo USART
+		auxRxData = (uint8_t) ptrUSART6Used->DR;
+		//Llamanos a la funcion de interrupcion
+		BasicUSART6_Callback();
+	}
+	else if (ptrUSART6Used->SR & USART_SR_TC)
+	{
+		//Limpiamos la bandera
+		ptrUSART6Used->SR &= ~USART_SR_TC;
+		//Llamanos a la funcion de interrupcion
+		BasicUSART6_Callback();
+	}
+	else
+	{
+		__NOP();
 	}
 }
+

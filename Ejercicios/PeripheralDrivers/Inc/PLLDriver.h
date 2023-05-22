@@ -11,12 +11,14 @@
 #include <stm32f4xx.h>
 
 //Definicion de macros
-#define CLOCK_SPEED_25MHZ  50;
-#define CLOCK_SPEED_80MHZ  160;
-#define CLOCK_SPEED_100MHZ  200;
+#define CLOCK_SPEED_16MHZ  16;
+#define CLOCK_SPEED_25MHZ  25;
+#define CLOCK_SPEED_80MHZ  80;
+#define CLOCK_SPEED_100MHZ  100;
 
 //Definicion de cabeceras
 void configPLL(uint8_t clockSpeed);
 uint8_t getConfigPLL(void);
+uint8_t getClockAPB1(void);
 
 #endif /* PLLDRIVER_H_ */
