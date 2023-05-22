@@ -240,39 +240,33 @@ void updateFrequency(PWM_Handler_t *prtPwmHandler, uint16_t newPer)
 	prtPwmHandler->config.periodo = newPer;
 	//Cargamos la nueva configuracion
 	setFrequency(prtPwmHandler);
-	//Actualizamos el valor del dutty
-	setDuttyCycle(prtPwmHandler);
 }
 
 //Configuracion del DuttyCicle
 void setDuttyCycle(PWM_Handler_t *prtPwmHandler)
 {
-	//Variable que define el tiempo que durada el DuttyCicle
-	uint16_t valorDuttyTime = 0;
-	valorDuttyTime = ((prtPwmHandler->config.periodo)/100)*(prtPwmHandler->config.duttyCicle);
-
 	//Selecionamos el canal para configurar el dutty
 	switch(prtPwmHandler->config.channel)
 	{
 
 	case PWM_CHANNEL_1:
 	{
-		prtPwmHandler->ptrTIMx->CCR1 = valorDuttyTime;
+		prtPwmHandler->ptrTIMx->CCR1 = prtPwmHandler->config.duttyCicle;
 		break;
 	}
 	case PWM_CHANNEL_2:
 	{
-		prtPwmHandler->ptrTIMx->CCR2 = valorDuttyTime;
+		prtPwmHandler->ptrTIMx->CCR2 = prtPwmHandler->config.duttyCicle;
 		break;
 	}
 	case PWM_CHANNEL_3:
 	{
-		prtPwmHandler->ptrTIMx->CCR3 = valorDuttyTime;
+		prtPwmHandler->ptrTIMx->CCR3 = prtPwmHandler->config.duttyCicle;
 		break;
 	}
 	case PWM_CHANNEL_4:
 	{
-		prtPwmHandler->ptrTIMx->CCR4 = valorDuttyTime;
+		prtPwmHandler->ptrTIMx->CCR4 = prtPwmHandler->config.duttyCicle;
 		break;
 	}
 	default:
@@ -283,11 +277,21 @@ void setDuttyCycle(PWM_Handler_t *prtPwmHandler)
 
 }
 
-//Actualizacion del Dutty
+
+//Actualizacion del Dutty sin porcentaje
 void updateDuttyCycle(PWM_Handler_t *prtPwmHandler, uint16_t newDutty)
 {
 	//Establecemos el nuevo valor del duttycicle en la configuracion del PWM
 	prtPwmHandler->config.duttyCicle = newDutty;
+	//Cargamos la nueva configuracion
+	setDuttyCycle(prtPwmHandler);
+}
+
+//Actualizacion del Dutty con porcentaje
+void updateDuttyCyclePercentage(PWM_Handler_t *prtPwmHandler, uint8_t newDuttyPercentage)
+{
+	//Establecemos el nuevo valor del duttycicle en la configuracion del PWM
+	prtPwmHandler->config.duttyCicle = ((prtPwmHandler->config.periodo)/100)*(newDuttyPercentage);
 	//Cargamos la nueva configuracion
 	setDuttyCycle(prtPwmHandler);
 }

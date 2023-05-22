@@ -14,7 +14,7 @@ uint64_t ticks_start = 0;
 uint64_t ticks_counting = 0;
 
 //Funcion para la configurar del Systick
-void config_SysTick_ms(uint8_t systemClock)
+void config_SysTick_ms(void)
 {
 	//Reiniciamos el valor de la variable que cuenta el tiempo
 	ticks = 0;

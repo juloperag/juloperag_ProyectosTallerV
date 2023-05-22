@@ -15,7 +15,7 @@
 #define SYSRICK_LOAD_VALUE_100MHz_1ms   100000 // Numero de ciclos en 1ms
 
 //Definicion de funciones
-void config_SysTick_ms(uint8_t systemClock);
+void config_SysTick_ms(void);   //uint8_t systemClock
 uint64_t getTicksMs(void);
 void delay_ms(uint32_t wait_time_ms);
 

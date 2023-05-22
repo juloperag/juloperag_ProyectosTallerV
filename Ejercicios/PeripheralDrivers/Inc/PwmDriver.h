@@ -26,7 +26,7 @@ typedef struct
 	uint8_t     channel;        //Canal PWM relacionado con el TIMER
 	uint16_t	periodcnt;		//A que velocidad se incrementa el TIMER,o valor en us del periodo del Clock Counter (min: 1, max:4096)
 	uint16_t	periodo;        //Numero de veces que el TIMER se incrementa,o valor en ms o uS(Depende) del periodo del timer o valor del autoreloar
-	uint16_t	duttyCicle;		//Valor en porcentaje (%) del tiempo que la señal esta en alto
+	uint16_t	duttyCicle;		//Valor en tiempo de la señal en alto
 }PWM_Config_t;
 
 //Definicion del Handler del PWM
@@ -44,6 +44,7 @@ void updateFrequency(PWM_Handler_t *prtPwmHandler, uint16_t newPer);
 //Dutty
 void setDuttyCycle(PWM_Handler_t *prtPwmHandler);
 void updateDuttyCycle(PWM_Handler_t *prtPwmHandler, uint16_t newDutty);
+void updateDuttyCyclePercentage(PWM_Handler_t *prtPwmHandler, uint8_t newDuttyPercentage);
 //Enable
 void enableOutput(PWM_Handler_t *prtPwmHandler);
 //Empezar PWM
