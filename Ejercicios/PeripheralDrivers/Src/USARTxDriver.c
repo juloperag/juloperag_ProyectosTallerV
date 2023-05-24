@@ -242,17 +242,16 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 	{
 		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RXNEIE;
 	}
-	//Se selecciono la interrupcion para TX
-	if(ptrUsartHandler->USART_Config.USART_enableIntTX ==  USART_TX_INTERRUP_ENABLE)
-	{
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TCIE;
-		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TCIE;
-	}
-	else
-	{
-		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TCIE;
-	}
-
+//	//Se selecciono la interrupcion para TX
+//	if(ptrUsartHandler->USART_Config.USART_enableIntTX ==  USART_TX_INTERRUP_ENABLE)
+//	{
+//		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
+//		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TXEIE;
+//	}
+//	else
+//	{
+//		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
+//	}
 
 	//Verificamos si se selecciono alguna interrupcion
 	if(ptrUsartHandler->USART_Config.USART_enableIntRX ==  USART_RX_INTERRUP_ENABLE || ptrUsartHandler->USART_Config.USART_enableIntTX ==  USART_TX_INTERRUP_ENABLE)
@@ -290,7 +289,7 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 }
 
 //Funcion para calcular el valor correspondiente a ingresar en el BRR
-uint8_t getValueBaudRate(uint8_t fck, uint32_t baudRate)
+uint16_t getValueBaudRate(uint8_t fck, uint32_t baudRate)
 {
     uint32_t usartDiv = (fck*10000000000)/(16*baudRate);
     uint32_t mantiza = usartDiv/10000;
@@ -339,20 +338,36 @@ uint8_t getRxData(void)
 	return auxRxData;
 }
 
+//Funcion para desactivar o activar las interrupciones por  TX
+void interruptionTX(USART_TypeDef *ptrUSARTxUsed, uint8_t interrupEnable)
+{
+	//Se selecciono la interrupcion para TX
+	if(interrupEnable ==  USART_TX_INTERRUP_ENABLE)
+	{
+		ptrUSARTxUsed->CR1 &= ~USART_CR1_TXEIE;
+		ptrUSARTxUsed->CR1 |= USART_CR1_TXEIE;
+	}
+	else
+	{
+		ptrUSARTxUsed->CR1  &= ~USART_CR1_TXEIE;
+	}
+}
+
+
 //Definimos las funciones para cuando se genera una interrupcion del USART1-2 y 6
-__attribute__((weak)) void BasicUSART1_Callback(void)
+__attribute__((weak)) void BasicUSART1_Callback(uint8_t interrup)
 {
 	__NOP();
 }
 
 
-__attribute__((weak)) void BasicUSART2_Callback(void)
+__attribute__((weak)) void BasicUSART2_Callback(uint8_t interrup)
 {
 	__NOP();
 }
 
 
-__attribute__((weak)) void BasicUSART6_Callback(void)
+__attribute__((weak)) void BasicUSART6_Callback(uint8_t interrup)
 {
 	__NOP();
 }
@@ -371,14 +386,14 @@ void USART1_IRQHandler(char data)
 		//Leemos el registro DR del respectivo USART
 		auxRxData = (uint8_t) ptrUSART1Used->DR;
 		//Llamanos a la funcion de interrupcion
-		BasicUSART1_Callback();
+		BasicUSART1_Callback(USART_RX_INTERRUP);
 	}
-	else if (ptrUSART1Used->SR & USART_SR_TC)
+	else if ((ptrUSART1Used->SR & USART_SR_TXE) && (ptrUSART1Used->CR1 & USART_CR1_TXEIE))
 	{
-		//Limpiamos la bandera
-		ptrUSART1Used->SR &= ~USART_SR_TC;
 		//Llamanos a la funcion de interrupcion
-		BasicUSART1_Callback();
+		BasicUSART1_Callback(USART_TX_INTERRUP);
+		//Desactivo la interrupcion
+		interruptionTX(ptrUSART1Used, USART_TX_INTERRUP_DISABLE);
 	}
 	else
 	{
@@ -396,14 +411,14 @@ void USART2_IRQHandler(char data)
 		//Leemos el registro DR del respectivo USART
 		auxRxData = (uint8_t) ptrUSART2Used->DR;
 		//Llamanos a la funcion de interrupcion
-		BasicUSART2_Callback();
+		BasicUSART2_Callback(USART_RX_INTERRUP);
 	}
-	else if (ptrUSART2Used->SR & USART_SR_TC)
+	else if ((ptrUSART2Used->SR & USART_SR_TXE) && (ptrUSART2Used->CR1 & USART_CR1_TXEIE))
 	{
-		//Limpiamos la bandera
-		ptrUSART2Used->SR &= ~USART_SR_TC;
 		//Llamanos a la funcion de interrupcion
-		BasicUSART2_Callback();
+		BasicUSART2_Callback(USART_TX_INTERRUP);
+		//Desactivo la interrupcion
+		interruptionTX(ptrUSART2Used, USART_TX_INTERRUP_DISABLE);
 	}
 	else
 	{
@@ -419,14 +434,14 @@ void USART6_IRQHandler(void)
 		//Leemos el registro DR del respectivo USART
 		auxRxData = (uint8_t) ptrUSART6Used->DR;
 		//Llamanos a la funcion de interrupcion
-		BasicUSART6_Callback();
+		BasicUSART6_Callback(USART_RX_INTERRUP);
 	}
-	else if (ptrUSART6Used->SR & USART_SR_TC)
+	else if ((ptrUSART6Used->SR & USART_SR_TXE) && (ptrUSART6Used->CR1 & USART_CR1_TXEIE))
 	{
-		//Limpiamos la bandera
-		ptrUSART6Used->SR &= ~USART_SR_TC;
 		//Llamanos a la funcion de interrupcion
-		BasicUSART6_Callback();
+		BasicUSART6_Callback(USART_TX_INTERRUP);
+		//Desactivo la interrupcion
+		interruptionTX(ptrUSART6Used, USART_TX_INTERRUP_DISABLE);
 	}
 	else
 	{

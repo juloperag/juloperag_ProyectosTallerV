@@ -84,7 +84,7 @@ void configPLL(uint8_t clockSpeed)
 	//------------------5) Seleccion del PLL como la fuente de reloj del sistema----------------------------
 	//Registro: CFGR
 
-	RCC->CFGR |= (0b10<<RCC_CFGR_SWS_Pos);
+	RCC->CFGR |= (0b10<<RCC_CFGR_SW_Pos);
 }
 
 //Funcion que retorna la velocidad de reloj entregado por el PLL o por el HSI en MHz

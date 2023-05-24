@@ -267,9 +267,9 @@ void int_Hardware(void)
 	//Definimos el TIMx a usar
 	handler_TIMER_Muestreo.ptrTIMx = TIM4;
 	//Definimos la configuracion del TIMER seleccionado
-	handler_TIMER_Muestreo.TIMx_Config.TIMx_periodcnt = BTIMER_PCNT_1ms; //BTIMER_PCNT_xus x->10,100/ BTIMER_PCNT_1ms
+	handler_TIMER_Muestreo.TIMx_Config.TIMx_periodcnt = BTIMER_PCNT_100us; //BTIMER_PCNT_xus x->10,100/ BTIMER_PCNT_1ms
 	handler_TIMER_Muestreo.TIMx_Config.TIMx_mode = BTIMER_MODE_UP; // BTIMER_MODE_x x->UP, DOWN
-	handler_TIMER_Muestreo.TIMx_Config.TIMX_period = 1;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_TIMER_Muestreo.TIMx_Config.TIMX_period = 10;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	//Cargamos la configuracion del TIMER especifico
 	BasicTimer_Config(&handler_TIMER_Muestreo);
 
@@ -345,16 +345,27 @@ void BasicTimer2_Callback(void)
 
 //-------------------------Acelerometro_Muestreo--------------------------------
 //Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el TIM4
-void BasicTimer3_Callback(void)
+void BasicTimer4_Callback(void)
 {
 	stateSampling = 1;
 }
 
 //-------------------------USARTRX--------------------------------
 //Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el USART2
-void BasicUSART1_Callback(void)
+void BasicUSART1_Callback(uint8_t interrup)
 {
-	charRead = getRxData();
+	if(interrup==USART_TX_INTERRUP)
+	{
+		__NOP();
+	}
+	else if(interrup==USART_RX_INTERRUP)
+	{
+		charRead = getRxData();
+	}
+	else
+	{
+		__NOP();
+	}
 }
 
 

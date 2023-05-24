@@ -39,6 +39,9 @@
 #define USART_STOPBIT_2				2
 #define USART_STOPBIT_1_5			3
 
+#define USART_TX_INTERRUP	0
+#define USART_RX_INTERRUP	1
+
 #define USART_RX_INTERRUP_DISABLE	0
 #define USART_RX_INTERRUP_ENABLE	1
 
@@ -83,12 +86,13 @@ typedef struct
 
 //Definicion de las cabeceras de las funciones para el uso del USART
 void USART_Config(USART_Handler_t *ptrUsartHandler);
-uint8_t getValueBaudRate(uint8_t fck, uint32_t baudRate);
+uint16_t getValueBaudRate(uint8_t fck, uint32_t baudRate);
 void writeChar(USART_Handler_t *ptrUsartHandlerWrite, uint8_t datatoSend);
 void writeMsg(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend);
 uint8_t getRxData(void);
-void BasicUSART1_Callback(void);
-void BasicUSART2_Callback(void);
-void BasicUSART6_Callback(void);
+void interruptionTX(USART_TypeDef *ptrUSARTxUsed, uint8_t interrupEnable);
+void BasicUSART1_Callback(uint8_t interrup);
+void BasicUSART2_Callback(uint8_t interrup);
+void BasicUSART6_Callback(uint8_t interrup) ;
 
 #endif /* USARTXDRIVER_H_ */
