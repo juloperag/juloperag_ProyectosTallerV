@@ -22,6 +22,7 @@
 
 //-----------------------------------Fin de definicion de librerias------------------------------------------
 
+uint8_t enviar = 0;
 
 //---------------------------Inicio de definicion de funciones y variables base----------------------------------
 
@@ -36,7 +37,6 @@ GPIO_Handler_t handler_GPIO_USB_TX = {0};       //Definimos un elemento del tipo
 GPIO_Handler_t handler_GPIO_USB_RX = {0};
 USART_Handler_t handler_USART_USB = {0};
 char charRead = '\0';                          //Variable que almacena el caracter leido
-char bufferMsg[64] = {0};                      //Variable que almacena un strings
 
 //--------------------------PWM-------------------------------
 GPIO_Handler_t handler_GPIO_PWM_1 = {0};       //Definimos un elemento del tipo GPIO_Handler_t (Struct) y PWM_Handler_t para la generan de la señal PWM
@@ -72,6 +72,10 @@ void acelerometro_I2C(void);                       //Definimos la cabecera de la
 
 //------------------Definiciones generales----------------------------------
 void duttyAccel(PWM_Handler_t *prtPwmHandler, int16_t valueAccel); //Definimos la cabecera de la funcion encargada de relacionar el valor del accelx con el dutty del PWMx
+void transmitAccel(char dataRead);       //Funcion que transmite por el puerto serial la informacion contenida en el arreglo del accel
+float convAccel(int16_t accelx);          //Funcion que convierte los valores guardados entregados por el acelerometro en valores en unidades m/s2
+uint8_t statusTxSampling = 0;             //variable que activa la transmision del muestreo de datos
+uint8_t countingTXSampling = 0;           //variable que cuenta las veces que se a mandado el a enviado el muestreo
 
 int main(void)
 {
@@ -82,6 +86,8 @@ int main(void)
 	int_Hardware();
 	//Activamos el SysTick
 	config_SysTick_ms();
+	//Activamos el punto flotante por medio del registro especifico
+	SCB->CPACR |= 0xF <<20;
 	//Definimos para el PIN un 1 logico,
 	GPIO_writePin (&handler_BlinkyPin, SET);
 
@@ -95,9 +101,42 @@ int main(void)
 			duttyAccel(&handler_PWM_1, accel[0]);
 			duttyAccel(&handler_PWM_2, accel[1]);
 			duttyAccel(&handler_PWM_3, accel[2]);
+			//Verificamos si esta activo del la transmision de los muestreos
+			if(statusTxSampling==1)
+			{
+				//Transmitimos de acuerdo al caracter dado
+				transmitAccel(charRead);
+				//Sumamos o reiniciamos las variable
+				if(countingTXSampling<2000)
+				{
+					countingTXSampling++;
+				}
+				else
+				{
+					countingTXSampling = 0;
+					statusTxSampling = 0;
+					charRead = '\0';
+				}
+			}
+			else
+			{
+				__NOP();
+			}
 			//Reiniciamos la variable
 			stateSampling = 0;
 		}
+		else if (charRead != '\0' && charRead != 'a')
+		{
+			//Transmitimos de acuerdo al caracter dado
+			transmitAccel(charRead);
+			//Definimos el elemento nulo
+			charRead = '\0';
+		}
+//		else if(enviar==4)
+//		{
+//			writeMsgForTXE(&handler_USART_USB, "HOLA MUNDO");
+//			enviar = 0;
+//		}
 		else
 		{
 		 __NOP();
@@ -130,12 +169,12 @@ void int_Hardware(void)
 	GPIO_Config(&handler_BlinkyPin);
 
 	//---------------------------USB--------------------------------
-	//---------------PIN: PA9----------------
+	//---------------PIN: PB6----------------
 	//------------AF7: USART1_TX----------------
 	//Definimos el periferico GPIOx a usar.
 	handler_GPIO_USB_TX.pGPIOx = GPIOA;
 	//Definimos el pin a utilizar
-	handler_GPIO_USB_TX.GPIO_PinConfig.GPIO_PinNumber = PIN_9; 						//PIN_x, 0-15
+	handler_GPIO_USB_TX.GPIO_PinConfig.GPIO_PinNumber = PIN_2; 						//PIN_x, 0-15
 	//Definimos la configuracion de los registro para el pin seleccionado
 	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
 	GPIO_PIN_Config(&handler_GPIO_USB_TX, GPIO_MODE_ALTFN, GPIO_OTYPER_PUSHPULL, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF7);
@@ -144,12 +183,12 @@ void int_Hardware(void)
 	//Cargamos la configuracion del PIN especifico
 	GPIO_Config(&handler_GPIO_USB_TX);
 
-	//---------------PIN: PA10----------------
+	//---------------PIN: PB7----------------
 	//------------AF7: USART1_RX----------------
 	//Definimos el periferico GPIOx a usar.
 	handler_GPIO_USB_RX.pGPIOx = GPIOA;
 	//Definimos el pin a utilizar
-	handler_GPIO_USB_RX.GPIO_PinConfig.GPIO_PinNumber = PIN_10; 						//PIN_x, 0-15
+	handler_GPIO_USB_RX.GPIO_PinConfig.GPIO_PinNumber = PIN_3; 						//PIN_x, 0-15
 	//Definimos la configuracion de los registro para el pin seleccionado
 	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
 	GPIO_PIN_Config(&handler_GPIO_USB_RX, GPIO_MODE_ALTFN, GPIO_OTYPER_PUSHPULL, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF7);
@@ -238,7 +277,7 @@ void int_Hardware(void)
 
 	//---------------USART1----------------
 	//Definimos el periferico USARTx a utilizar
-	handler_USART_USB.ptrUSARTx = USART1;
+	handler_USART_USB.ptrUSARTx = USART2;
 	//Definimos la configuracion del USART seleccionado
 	handler_USART_USB.USART_Config.USART_mode = USART_MODE_RXTX ;           //USART_MODE_x  x-> TX, RX, RXTX, DISABLE
 	handler_USART_USB.USART_Config.USART_baudrate = USART_BAUDRATE_115200;  //USART_BAUDRATE_x  x->9600, 19200, 115200
@@ -280,12 +319,12 @@ void int_Hardware(void)
 
 	//---------------TIM3_Channel_1----------------
 	//Definimos el TIMx a usar
-	handler_PWM_1.ptrTIMx = TIM3;
+	handler_PWM_1.ptrTIMx = TIM3; //65534
 	//Definimos la configuracion para el PWM
 	handler_PWM_1.config.periodcnt = BTIMER_PCNT_1us; //BTIMER_PCNT_xus x->1,10,100/ BTIMER_PCNT_1ms
-	handler_PWM_1.config.periodo = 65535;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_PWM_1.config.periodo = 65530;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	handler_PWM_1.config.channel = PWM_CHANNEL_1;     //PWM_CHANNEL_x x->1,2,3,4
-	handler_PWM_1.config.duttyCicle = 10000;          //Valor entre 0-100 [%]
+	handler_PWM_1.config.duttyCicle = 32500;          //Valor entre 0-100 [%]
 	//Cargamos la configuracion
 	pwm_Config(&handler_PWM_1);
 	//Activar el TIMER y con ello el PWM
@@ -296,9 +335,9 @@ void int_Hardware(void)
 	handler_PWM_2.ptrTIMx = TIM3;
 	//Definimos la configuracion para el PWM
 	handler_PWM_2.config.periodcnt = BTIMER_PCNT_1us; //BTIMER_PCNT_xus x->1,10,100/ BTIMER_PCNT_1ms
-	handler_PWM_2.config.periodo = 65535;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_PWM_2.config.periodo = 65530;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	handler_PWM_2.config.channel = PWM_CHANNEL_2;     //PWM_CHANNEL_x x->1,2,3,4
-	handler_PWM_2.config.duttyCicle = 10000;          //Valor entre 0-100 [%]
+	handler_PWM_2.config.duttyCicle = 32500;          //Valor entre 0-100 [%]
 	//Cargamos la configuracion
 	pwm_Config(&handler_PWM_2);
 	//Activar el TIMER y con ello el PWM
@@ -309,9 +348,9 @@ void int_Hardware(void)
 	handler_PWM_3.ptrTIMx = TIM3;
 	//Definimos la configuracion para el PWM
 	handler_PWM_3.config.periodcnt = BTIMER_PCNT_1us; //BTIMER_PCNT_xus x->1,10,100/ BTIMER_PCNT_1ms
-	handler_PWM_3.config.periodo = 65535;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_PWM_3.config.periodo = 65530;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	handler_PWM_3.config.channel = PWM_CHANNEL_4;     //PWM_CHANNEL_x x->1,2,3,4
-	handler_PWM_3.config.duttyCicle = 10000;          //Valor entre 0-100 [%]
+	handler_PWM_3.config.duttyCicle = 32500;          //Valor entre 0-100 [%]
 	//Cargamos la configuracion
 	pwm_Config(&handler_PWM_3);
 	//Activar el TIMER y con ello el PWM
@@ -341,6 +380,7 @@ void int_Hardware(void)
 void BasicTimer2_Callback(void)
 {
 	GPIOxTooglePin(&handler_BlinkyPin);
+//	enviar++;
 }
 
 //-------------------------Acelerometro_Muestreo--------------------------------
@@ -352,15 +392,22 @@ void BasicTimer4_Callback(void)
 
 //-------------------------USARTRX--------------------------------
 //Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el USART2
-void BasicUSART1_Callback(uint8_t interrup)
+void BasicUSART2_Callback(void)
 {
-	if(interrup==USART_TX_INTERRUP)
+	//Verificamos si el elemento nulo esta activo
+	if (charRead == '\0')
 	{
-		__NOP();
-	}
-	else if(interrup==USART_RX_INTERRUP)
-	{
+		//Guardamos el caracter recibido
 		charRead = getRxData();
+		//Verificamos si el carater recibido es 'a'
+		if(charRead == 'a')
+		{
+			statusTxSampling = 1;
+		}
+		else
+		{
+			__NOP();
+		}
 	}
 	else
 	{
@@ -401,6 +448,64 @@ void duttyAccel(PWM_Handler_t *prtPwmHandler, int16_t valueAccel)
 	uint16_t dutty = (uint16_t) value;
 	updateDuttyCycle(prtPwmHandler, dutty);
 }
+
+//Funcion que transmite por el puerto serial la informacion contenida en el arreglo del accel
+void transmitAccel(char dataRead)
+{
+	char bufferMsg[64] = {0};                      //Variable que almacena un strings
+
+	//Dependiendo del caso envia un string diferente
+	switch(dataRead)
+	{
+	case 'x':
+	{
+		//Creo un string con el valor de la aceleracion
+		sprintf(bufferMsg,"Aceleracion Eje X: %#.2f \n", convAccel(accel[0]));
+		//Envio el string por comunicacion Serial
+		writeMsgForTXE(&handler_USART_USB, bufferMsg);
+		break;
+	}
+	case 'y':
+	{
+		//Creo un string con el valor de la aceleracion
+		sprintf(bufferMsg,"Aceleracion Eje Y: %#.2f \n", convAccel(accel[1]));
+		//Envio el string por comunicacion Serial
+		writeMsgForTXE(&handler_USART_USB, bufferMsg);
+		break;
+	}
+	case 'z':
+	{
+		//Creo un string con el valor de la aceleracion
+		sprintf(bufferMsg,"Aceleracion Eje Z: %#.2f \n", convAccel(accel[2]));
+		//Envio el string por comunicacion Serial
+		writeMsgForTXE(&handler_USART_USB, bufferMsg);
+		break;
+	}
+	case 'a':
+	{
+	   //Creo un string con el valor de la aceleracion
+		sprintf(bufferMsg,"Aceleracion Eje X: %#.2f m/s²; Eje Y: %#.2f m/s²; Eje Z: %#.2f m/s² \n", convAccel(accel[0]), convAccel(accel[1]), convAccel(accel[2]));
+	   //Envio el string por comunicacion Serial
+		writeMsgForTXE(&handler_USART_USB, bufferMsg);
+
+		break;
+	}
+	default:
+	{
+		__NOP();
+		break;
+	}
+	}
+}
+
+//Funcion que convierte los valores guardados entregados por el acelerometro en valores en unidades m/s2
+float convAccel(int16_t accelx)
+{
+	float value = (accelx/16384)*9.81;
+
+	return value;
+}
+
 
 //--------------------------  --Fin de la definicion de las funciones------------------------------------------
 

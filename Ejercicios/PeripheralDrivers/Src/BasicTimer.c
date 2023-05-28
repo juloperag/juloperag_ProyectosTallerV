@@ -70,7 +70,7 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler)
 
 	/*La frecuencia de reloj contador CK_CNT es igual a fck_psc/(psc[15:0]+1)
 	 * por tanto define la velocidad a la que incrementa el counter*/
-	ptrBTimerHandler->ptrTIMx->PSC = clock*(ptrBTimerHandler->TIMx_Config.TIMx_periodcnt)-1; //(min:0, max:65536)
+	ptrBTimerHandler->ptrTIMx->PSC = (clock*2)*(ptrBTimerHandler->TIMx_Config.TIMx_periodcnt)-1; //(min:0, max:65536)
 
 	//----------------------3) Configurando de la direccion del counter(up/down)---------------------------
 	//Registro:TIMx_CR1		Es un registro de configuracion del TIMx

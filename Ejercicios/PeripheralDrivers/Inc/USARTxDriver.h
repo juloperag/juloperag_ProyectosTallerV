@@ -89,10 +89,13 @@ void USART_Config(USART_Handler_t *ptrUsartHandler);
 uint16_t getValueBaudRate(uint8_t fck, uint32_t baudRate);
 void writeChar(USART_Handler_t *ptrUsartHandlerWrite, uint8_t datatoSend);
 void writeMsg(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend);
+void writeCharForTXE(USART_Handler_t *ptrUsartHandler, uint8_t datatoSend);
+void writeMsgForTXE(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend);
 uint8_t getRxData(void);
 void interruptionTX(USART_TypeDef *ptrUSARTxUsed, uint8_t interrupEnable);
-void BasicUSART1_Callback(uint8_t interrup);
-void BasicUSART2_Callback(uint8_t interrup);
-void BasicUSART6_Callback(uint8_t interrup) ;
+
+void BasicUSART1_Callback(void);
+void BasicUSART2_Callback(void);
+void BasicUSART6_Callback(void);
 
 #endif /* USARTXDRIVER_H_ */

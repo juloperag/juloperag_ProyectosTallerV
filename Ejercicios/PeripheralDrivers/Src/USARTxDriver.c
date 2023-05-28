@@ -7,6 +7,7 @@
 
 #include <USARTxDriver.h>
 #include <PLLDriver.h>
+#include <stdio.h>
 
 //Se cuenta con 3 USART: USART1, USART2, USART6
 
@@ -15,8 +16,12 @@ USART_TypeDef *ptrUSART1Used;
 USART_TypeDef *ptrUSART2Used;
 USART_TypeDef *ptrUSART6Used;
 
-//Variable que almacena el dato recibido
-uint8_t auxRxData = 0;
+
+uint8_t auxRxData = 0;                               //Variable que almacena el dato recibido
+char datatoSendForTXE = '\0';                        //Variable que indica el estado de transmision
+char bufferMsgForTXE[64] = {0};                      //Variable que almacena un strings
+uint8_t posChar = 0;                                 //Variable para recorrer el String
+uint8_t typeWriteTXE = 0;                            //Variable que selecciona el tipo entre string y caracter
 
 //Funcion para cargar la configuracion del periferico USART
 void USART_Config(USART_Handler_t *ptrUsartHandler)
@@ -34,7 +39,7 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 		ptrUSART1Used = ptrUsartHandler->ptrUSARTx;
 	}
 
-	if(ptrUsartHandler->ptrUSARTx == USART2)
+	else if(ptrUsartHandler->ptrUSARTx == USART2)
 	{
 		/*Activamos el periferico escribiendo un 1 deacuerdo a la posicion
 		 * del periferico en el registro*/
@@ -288,7 +293,7 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 	}
 }
 
-//Funcion para calcular el valor correspondiente a ingresar en el BRR
+//---------------Funcion para calcular el valor correspondiente a ingresar en el BRR----------
 uint16_t getValueBaudRate(uint8_t fck, uint32_t baudRate)
 {
     uint32_t usartDiv = (fck*10000000000)/(16*baudRate);
@@ -300,8 +305,8 @@ uint16_t getValueBaudRate(uint8_t fck, uint32_t baudRate)
     return value;
 }
 
+//---------------Funciones para la transmision de datos------------------------------
 //Funcion para escribir un solo char
-
 void writeChar(USART_Handler_t *ptrUsartHandler, uint8_t datatoSend)
 {
 	//Verificamos que no se este enviando un mensaje
@@ -312,12 +317,6 @@ void writeChar(USART_Handler_t *ptrUsartHandler, uint8_t datatoSend)
 	//Almacenamos un elemento char en el registro USART_DR
 	ptrUsartHandler->ptrUSARTx->DR = datatoSend;
 
-//	//Se genera una pausa del codigo, mientras se completa la transferencia de datos
-//	while(!(ptrUsartHandler->ptrUSARTx->SR & USART_SR_TC))
-//	{
-//		__NOP();
-//	}
-//	ptrUsartHandler->ptrUSARTx->SR &= ~USART_SR_TC;
 }
 
 //Funcion para escribir un string
@@ -329,6 +328,43 @@ void writeMsg(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend)
 	{
 		writeChar(ptrUsartHandlerString, MsgtoSend[i]);
 		i++;
+	}
+}
+
+//----------------Funciones para la transmision de datos por interrupcion------------------------------
+//Funcion para escribir un solo char
+void writeCharForTXE(USART_Handler_t *ptrUsartHandler, uint8_t datatoSend)
+{
+	if (posChar==0)
+	{
+		//Guardamos el caracter que se desea enviaren una variable
+		datatoSendForTXE = datatoSend;
+		//cambiamos el tipo
+		typeWriteTXE = 0;
+		//Activo la interrupcion
+		interruptionTX(ptrUsartHandler->ptrUSARTx, USART_TX_INTERRUP_ENABLE);
+	}
+	else
+	{
+		__NOP();
+	}
+}
+
+//Funcion para escribir un string
+void writeMsgForTXE(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend)
+{
+	if (posChar==0)
+	{
+		//Guardamos el string que se desea enviar en un arreglo
+		sprintf(bufferMsgForTXE, MsgtoSend);
+		//cambiamos el tipo
+		typeWriteTXE = 1;
+		//Activo la interrupcion
+		interruptionTX(ptrUsartHandlerString->ptrUSARTx, USART_TX_INTERRUP_ENABLE);
+	}
+	else
+	{
+		__NOP();
 	}
 }
 
@@ -355,19 +391,19 @@ void interruptionTX(USART_TypeDef *ptrUSARTxUsed, uint8_t interrupEnable)
 
 
 //Definimos las funciones para cuando se genera una interrupcion del USART1-2 y 6
-__attribute__((weak)) void BasicUSART1_Callback(uint8_t interrup)
+__attribute__((weak)) void BasicUSART1_Callback()
 {
 	__NOP();
 }
 
 
-__attribute__((weak)) void BasicUSART2_Callback(uint8_t interrup)
+__attribute__((weak)) void BasicUSART2_Callback()
 {
 	__NOP();
 }
 
 
-__attribute__((weak)) void BasicUSART6_Callback(uint8_t interrup)
+__attribute__((weak)) void BasicUSART6_Callback()
 {
 	__NOP();
 }
@@ -378,22 +414,40 @@ __attribute__((weak)) void BasicUSART6_Callback(uint8_t interrup)
  * Con ello Guardamos el elemento char recibido
  */
 
-void USART1_IRQHandler(char data)
+void USART1_IRQHandler(void)
 {
 	//Confirmamos que el registro RXNE esta activo
-	if(ptrUSART1Used->SR & USART_SR_RXNE)
+	if(USART1->SR & USART_SR_RXNE)
 	{
 		//Leemos el registro DR del respectivo USART
 		auxRxData = (uint8_t) ptrUSART1Used->DR;
 		//Llamanos a la funcion de interrupcion
-		BasicUSART1_Callback(USART_RX_INTERRUP);
+		BasicUSART1_Callback();
 	}
-	else if ((ptrUSART1Used->SR & USART_SR_TXE) && (ptrUSART1Used->CR1 & USART_CR1_TXEIE))
+	else if (ptrUSART1Used->SR & USART_SR_TXE)
 	{
-		//Llamanos a la funcion de interrupcion
-		BasicUSART1_Callback(USART_TX_INTERRUP);
-		//Desactivo la interrupcion
-		interruptionTX(ptrUSART1Used, USART_TX_INTERRUP_DISABLE);
+		//Verificamos entre Sting o Caracter para enviar
+		if(bufferMsgForTXE[posChar] != '\0' && typeWriteTXE == 0)
+		{
+			//transmitimos el caracter
+			ptrUSART1Used->DR = bufferMsgForTXE[posChar];
+			//aunmentamos la variable
+			posChar++;
+		}
+		else if(typeWriteTXE == 1)
+		{
+			//transmitimos el caracter
+			ptrUSART1Used->DR = datatoSendForTXE;
+			//Desactivo la interrupcion
+			interruptionTX(ptrUSART1Used, USART_TX_INTERRUP_DISABLE);
+		}
+		else
+		{
+			//Desactivo la interrupcion
+			interruptionTX(ptrUSART1Used, USART_TX_INTERRUP_DISABLE);
+			//reiniciamos la variable
+			posChar = 0;
+		}
 	}
 	else
 	{
@@ -403,7 +457,7 @@ void USART1_IRQHandler(char data)
 
 }
 
-void USART2_IRQHandler(char data)
+void USART2_IRQHandler(void)
 {
 	//Confirmamos que el registro RXNE esta activo
 	if(ptrUSART2Used->SR & USART_SR_RXNE)
@@ -411,14 +465,32 @@ void USART2_IRQHandler(char data)
 		//Leemos el registro DR del respectivo USART
 		auxRxData = (uint8_t) ptrUSART2Used->DR;
 		//Llamanos a la funcion de interrupcion
-		BasicUSART2_Callback(USART_RX_INTERRUP);
+		BasicUSART2_Callback();
 	}
-	else if ((ptrUSART2Used->SR & USART_SR_TXE) && (ptrUSART2Used->CR1 & USART_CR1_TXEIE))
+	else if (ptrUSART2Used->SR & USART_SR_TXE)
 	{
-		//Llamanos a la funcion de interrupcion
-		BasicUSART2_Callback(USART_TX_INTERRUP);
-		//Desactivo la interrupcion
-		interruptionTX(ptrUSART2Used, USART_TX_INTERRUP_DISABLE);
+		//Verificamos entre Sting o Caracter para enviar
+		if(typeWriteTXE == 0)
+		{
+			//transmitimos el caracter
+			ptrUSART2Used->DR = datatoSendForTXE;
+			//Desactivo la interrupcion
+			interruptionTX(ptrUSART2Used, USART_TX_INTERRUP_DISABLE);
+		}
+		else if((bufferMsgForTXE[posChar] != '\0') && typeWriteTXE == 1)
+		{
+			//transmitimos el caracter
+			ptrUSART2Used->DR = bufferMsgForTXE[posChar];
+			//aunmentamos la variable
+			posChar++;
+		}
+		else
+		{
+			//Desactivo la interrupcion
+			interruptionTX(ptrUSART2Used, USART_TX_INTERRUP_DISABLE);
+			//reiniciamos la variable
+			posChar = 0;
+		}
 	}
 	else
 	{
@@ -434,14 +506,32 @@ void USART6_IRQHandler(void)
 		//Leemos el registro DR del respectivo USART
 		auxRxData = (uint8_t) ptrUSART6Used->DR;
 		//Llamanos a la funcion de interrupcion
-		BasicUSART6_Callback(USART_RX_INTERRUP);
+		BasicUSART6_Callback();
 	}
-	else if ((ptrUSART6Used->SR & USART_SR_TXE) && (ptrUSART6Used->CR1 & USART_CR1_TXEIE))
+	else if (ptrUSART6Used->SR & USART_SR_TXE)
 	{
-		//Llamanos a la funcion de interrupcion
-		BasicUSART6_Callback(USART_TX_INTERRUP);
-		//Desactivo la interrupcion
-		interruptionTX(ptrUSART6Used, USART_TX_INTERRUP_DISABLE);
+		//Verificamos entre Sting o Caracter para enviar
+		if(bufferMsgForTXE[posChar] != '\0' && typeWriteTXE == 0)
+		{
+			//transmitimos el caracter
+			ptrUSART6Used->DR = bufferMsgForTXE[posChar];
+			//aunmentamos la variable
+			posChar++;
+		}
+		else if(typeWriteTXE == 1)
+		{
+			//transmitimos el caracter
+			ptrUSART6Used->DR = datatoSendForTXE;
+			//Desactivo la interrupcion
+			interruptionTX(ptrUSART6Used, USART_TX_INTERRUP_DISABLE);
+		}
+		else
+		{
+			//Desactivo la interrupcion
+			interruptionTX(ptrUSART6Used, USART_TX_INTERRUP_DISABLE);
+			//reiniciamos la variable
+			posChar = 0;
+		}
 	}
 	else
 	{

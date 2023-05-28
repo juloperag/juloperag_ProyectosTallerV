@@ -26,7 +26,7 @@ void configPLL(uint8_t clockSpeed)
 	}
 	else
 	{
-		RCC->CFGR |= RCC_CFGR_PPRE1_DIV2;
+		RCC->CFGR |= RCC_CFGR_PPRE1_DIV4;
 	}
 
 	//-------------1) Seleccion del HSI como la fuente de reloj para el PLL---------------
@@ -38,12 +38,12 @@ void configPLL(uint8_t clockSpeed)
 
 	//----a) Modificacion del factor divisor M---------
 	     //Señal de entrada al VCO entre 1 MHz y 2 MHz
-	RCC->PLLCFGR |= (0x8<<RCC_PLLCFGR_PLLM_Pos);  //De acuerdo al Manual de usuario se especifica un valor de 8 para que la señal de entrada al VCO sea de 2 Mhz
+	RCC->PLLCFGR |= (0x16<<RCC_PLLCFGR_PLLM_Pos);  //De acuerdo al Manual de usuario se especifica un valor de 8 para que la señal de entrada al VCO sea de 2 Mhz
 
 	//----b) Modificacion del factor multiplicador N-----
          //Señal de salida al VCO entre 100 MHz y 438 MHz
 		 //El valor de N sera entre de 50 y 200
-	RCC->PLLCFGR |= ((clockSpeed*2)<<RCC_PLLCFGR_PLLN_Pos); //De acuerdo al Manual de usuario y los calculos realizados el valor de N sera entre 50 y 200, para un valor de P de 4.
+	RCC->PLLCFGR |= ((clockSpeed*4)<<RCC_PLLCFGR_PLLN_Pos); //De acuerdo al Manual de usuario y los calculos realizados el valor de N sera entre 50 y 200, para un valor de P de 4.
 
 	//----c) Modificacion del factor divisor P-----
 	     //Señal de salida del PLL entre 25 MHz y 100 MHz
@@ -116,9 +116,10 @@ uint8_t getClockAPB1(void)
 	}
 	else
 	{
-		clockAPB1 = clock/2;
+		clockAPB1 = clock/4;
 	}
 	return clockAPB1;
 }
+
 
 

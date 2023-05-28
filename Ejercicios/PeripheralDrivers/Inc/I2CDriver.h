@@ -51,5 +51,6 @@ void i2c_SendNoAck(I2C_Handler_t *ptrHandlerI2C);
 
 uint8_t i2c_ReadSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead);
 void i2c_WriteSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead, uint8_t newValue);
+void i2c_WriteSingle(I2C_Handler_t *ptrHandlerI2C, uint8_t newValue);
 
 #endif /* I2CDRIVER_H_ */

@@ -39,7 +39,7 @@ EXTI_Config_t handler_EXTI_Button ={0};
 GPIO_Handler_t handler_GPIO_USB_TX = {0};       //Definimos un elemento del tipo GPIO_Handler_t (Struct) y USART_Handler_t para el uso del USB
 GPIO_Handler_t handler_GPIO_USB_RX = {0};
 USART_Handler_t handler_USART_USB = {0};
-char charRead = '\0';                        //Variable que almacena el caracter leido
+char charRead = 'w';                        //Variable que almacena el caracter leido
 char sendMg[] = "Boton presionado \n";       //Definimos string
 char bufferMsg[64] = {0};
 
@@ -72,7 +72,7 @@ int main(void)
 	//Realizamos la configuracuion inicial
 	int_Hardware();
 	//Activamos el SysTick
-	config_SysTick_ms(0);
+	config_SysTick_ms();
 	//Activamos el punto flotante por medio del registro especifico
 	SCB->CPACR |= 0xF <<20;
 	//Definimos para el PIN un 1 logico,
@@ -119,6 +119,7 @@ int main(void)
 		}
 		else
 		{
+			acelerometro_I2C();
 			__NOP();
 		}
 	}
