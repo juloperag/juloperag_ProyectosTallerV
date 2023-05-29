@@ -144,7 +144,7 @@ void GPIO_Config (GPIO_Handler_t *pGPIOHandler)
 		//Para los pines 8 a 15 escogemos el AFRH
 		else
 		{
-			auxPosition = 4*pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber;
+			auxPosition = 4*(pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber-8);
 
 			//Cargamos auxPosition en el registro AFRL
 			pGPIOHandler->pGPIOx->AFR[1] &= ~(0b1111 << auxPosition);
