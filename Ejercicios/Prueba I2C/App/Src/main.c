@@ -68,6 +68,7 @@ int main(void)
 	config_SysTick_ms(0);
 	//Configuramos la LCD
 	lcd_i2c_init(&handler_I2C_LCD);
+	//Activamos el parpadeo del cursor
 	lcd_i2c_cursor_blinky(&handler_I2C_LCD);
 	//Definimos para el PIN un 1 logico,
 //	GPIO_writePin (&handler_BlinkyPin, SET);

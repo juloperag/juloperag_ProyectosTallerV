@@ -31,11 +31,14 @@
 #define BITS_L                (0b1111)
 
 #define	TURN_ON_DISPLAY      (0b00001000)
+#define	DIPLAY_ENABLE        (0b00001100)
+#define	CURSOR_BLINKY        (0b00001111)
 #define	CLEAR_DISPLAY        (0b00000001)
 
 //Definicion de las cabeceras de las funciones
 void lcd_i2c_init(I2C_Handler_t *ptrHandlerLCDI2C);
 void lcd_i2c_clear(I2C_Handler_t *ptrHandlerLCDI2C);
+void lcd_i2c_cursor_blinky(I2C_Handler_t *ptrHandlerLCDI2C);
 void lcd_i2c_gotoxy(I2C_Handler_t *ptrHandlerLCDI2C, uint8_t row, uint8_t column);
 void lcd_i2c_putc(I2C_Handler_t *ptrHandlerLCDI2C, char *MsgtoSend);
 

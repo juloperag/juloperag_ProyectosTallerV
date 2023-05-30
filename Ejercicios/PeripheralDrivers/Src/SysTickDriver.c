@@ -95,6 +95,66 @@ void delay_ms(uint32_t wait_time_ms)
  * funcion en el vector de interrupciones
  */
 
+//Funcion para la configurar del Systick
+void config_SysTick_us(void)
+{
+	//Reiniciamos el valor de la variable que cuenta el tiempo
+	ticks = 0;
+
+	/*Cargamos el valor del limite de incrementos que representa 1us
+	 * Depende de la señal de reloj interno del MCU
+	 */
+
+	uint8_t clock = getConfigPLL();  	     //Obtenemos la velocidad de reloj del sistema
+	SysTick->LOAD = clock;                  //Cargamos el valor correspondiente a 1 us
+
+	//Limpiamos el valor actual del Systick
+	SysTick->VAL = 0;
+
+	//Configuramos el relog interno como el reloj para el timer
+	SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk;
+
+	//Desactivamos las interrupciones globales
+
+	__disable_irq();
+
+	//Matriculamos la interrupcion en el NVIC
+	NVIC_EnableIRQ(SysTick_IRQn);
+	//Activamos la interrupcion debido al conteo a cero del SysTick
+	SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
+	//Actimos el timer
+	SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
+	//Activamos las interrupciones globales
+	__enable_irq();
+
+}
+
+//Funcion que retorna el tiempo en ms transcurrido desde que que inicio el SysTick
+uint64_t getTicksUs(void)
+{
+	return ticks;
+}
+
+//Funcion que genera un delay de us
+void delay_us(uint32_t wait_time_us)
+{
+	//Guardamos el valor de ticks transcurridos hasta el momento
+	ticks_start = getTicksUs();
+	//Guardamos tambien el valor de ticks transcurridos hasta el momento en una nueva variable
+	ticks_counting = getTicksUs();
+
+	//Realizamos un while que espera que se cumpla el tiempo asignado
+	while(ticks_counting<(ticks_start+(uint64_t)wait_time_us))
+	{
+		//Actualizamos el valor
+		ticks_counting = getTicksUs();
+	}
+
+}
+
+/* Cuando se produce una interrupcion en el NVIC debido SysTick, apuntara a esta
+ * funcion en el vector de interrupciones
+ */
 void SysTick_Handler(void)
 {
 	//Verificamos que la interrupcion se lance

@@ -299,7 +299,7 @@ uint16_t getValueBaudRate(uint8_t fck, uint32_t baudRate)
     uint32_t usartDiv = (fck*10000000000)/(16*baudRate);
     uint32_t mantiza = usartDiv/10000;
     uint32_t decimal = usartDiv-mantiza*10000;
-    uint8_t div_Fraction = (decimal)/625;
+    uint8_t div_Fraction = (decimal+1000)/625;
     uint16_t value  = mantiza<<USART_BRR_DIV_Mantissa_Pos | div_Fraction;
 
     return value;
@@ -417,7 +417,7 @@ __attribute__((weak)) void BasicUSART6_Callback()
 void USART1_IRQHandler(void)
 {
 	//Confirmamos que el registro RXNE esta activo
-	if(USART1->SR & USART_SR_RXNE)
+	if(ptrUSART1Used->SR & USART_SR_RXNE)
 	{
 		//Leemos el registro DR del respectivo USART
 		auxRxData = (uint8_t) ptrUSART1Used->DR;
@@ -427,19 +427,19 @@ void USART1_IRQHandler(void)
 	else if (ptrUSART1Used->SR & USART_SR_TXE)
 	{
 		//Verificamos entre Sting o Caracter para enviar
-		if(bufferMsgForTXE[posChar] != '\0' && typeWriteTXE == 0)
-		{
-			//transmitimos el caracter
-			ptrUSART1Used->DR = bufferMsgForTXE[posChar];
-			//aunmentamos la variable
-			posChar++;
-		}
-		else if(typeWriteTXE == 1)
+		if(typeWriteTXE == 0)
 		{
 			//transmitimos el caracter
 			ptrUSART1Used->DR = datatoSendForTXE;
 			//Desactivo la interrupcion
 			interruptionTX(ptrUSART1Used, USART_TX_INTERRUP_DISABLE);
+		}
+		else if((bufferMsgForTXE[posChar] != '\0') && typeWriteTXE == 1)
+		{
+			//transmitimos el caracter
+			ptrUSART1Used->DR = bufferMsgForTXE[posChar];
+			//aunmentamos la variable
+			posChar++;
 		}
 		else
 		{
@@ -453,8 +453,6 @@ void USART1_IRQHandler(void)
 	{
 		__NOP();
 	}
-
-
 }
 
 void USART2_IRQHandler(void)
@@ -511,19 +509,19 @@ void USART6_IRQHandler(void)
 	else if (ptrUSART6Used->SR & USART_SR_TXE)
 	{
 		//Verificamos entre Sting o Caracter para enviar
-		if(bufferMsgForTXE[posChar] != '\0' && typeWriteTXE == 0)
-		{
-			//transmitimos el caracter
-			ptrUSART6Used->DR = bufferMsgForTXE[posChar];
-			//aunmentamos la variable
-			posChar++;
-		}
-		else if(typeWriteTXE == 1)
+		if(typeWriteTXE == 0)
 		{
 			//transmitimos el caracter
 			ptrUSART6Used->DR = datatoSendForTXE;
 			//Desactivo la interrupcion
 			interruptionTX(ptrUSART6Used, USART_TX_INTERRUP_DISABLE);
+		}
+		else if((bufferMsgForTXE[posChar] != '\0') && typeWriteTXE == 1)
+		{
+			//transmitimos el caracter
+			ptrUSART6Used->DR = bufferMsgForTXE[posChar];
+			//aunmentamos la variable
+			posChar++;
 		}
 		else
 		{
