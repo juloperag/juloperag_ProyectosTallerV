@@ -19,7 +19,10 @@ USART_TypeDef *ptrUSART6Used;
 
 uint8_t auxRxData = 0;                               //Variable que almacena el dato recibido
 char datatoSendForTXE = '\0';                        //Variable que indica el estado de transmision
-char bufferMsgForTXE[64] = {0};                      //Variable que almacena un strings
+char bufferMsgForTXE[100] = {0};                      //Variable que almacena un strings
+char bufferMsgForTXE_inLine[20][100] = {0};           //Variable que almacena varios strings
+uint8_t inLine = 0;                                  //Variable que cuenta los string que estan en la cola
+uint8_t inLineTxe = 0;                               //Variable que define el string que sigue en la cola
 uint8_t posChar = 0;                                 //Variable para recorrer el String
 uint8_t typeWriteTXE = 0;                            //Variable que selecciona el tipo entre string y caracter
 
@@ -247,16 +250,6 @@ void USART_Config(USART_Handler_t *ptrUsartHandler)
 	{
 		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RXNEIE;
 	}
-//	//Se selecciono la interrupcion para TX
-//	if(ptrUsartHandler->USART_Config.USART_enableIntTX ==  USART_TX_INTERRUP_ENABLE)
-//	{
-//		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
-//		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TXEIE;
-//	}
-//	else
-//	{
-//		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
-//	}
 
 	//Verificamos si se selecciono alguna interrupcion
 	if(ptrUsartHandler->USART_Config.USART_enableIntRX ==  USART_RX_INTERRUP_ENABLE || ptrUsartHandler->USART_Config.USART_enableIntTX ==  USART_TX_INTERRUP_ENABLE)
@@ -299,7 +292,7 @@ uint16_t getValueBaudRate(uint8_t fck, uint32_t baudRate)
     uint32_t usartDiv = (fck*10000000000)/(16*baudRate);
     uint32_t mantiza = usartDiv/10000;
     uint32_t decimal = usartDiv-mantiza*10000;
-    uint8_t div_Fraction = (decimal+1000)/625;
+    uint8_t div_Fraction = (decimal-1000)/625;
     uint16_t value  = mantiza<<USART_BRR_DIV_Mantissa_Pos | div_Fraction;
 
     return value;
@@ -337,7 +330,7 @@ void writeCharForTXE(USART_Handler_t *ptrUsartHandler, uint8_t datatoSend)
 {
 	if (posChar==0)
 	{
-		//Guardamos el caracter que se desea enviaren una variable
+		//Guardamos el caracter que se desea enviar en una variable
 		datatoSendForTXE = datatoSend;
 		//cambiamos el tipo
 		typeWriteTXE = 0;
@@ -353,7 +346,7 @@ void writeCharForTXE(USART_Handler_t *ptrUsartHandler, uint8_t datatoSend)
 //Funcion para escribir un string
 void writeMsgForTXE(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend)
 {
-	if (posChar==0)
+	if (posChar == 0 && inLineTxe == 0)
 	{
 		//Guardamos el string que se desea enviar en un arreglo
 		sprintf(bufferMsgForTXE, MsgtoSend);
@@ -364,7 +357,8 @@ void writeMsgForTXE(USART_Handler_t *ptrUsartHandlerString, char *MsgtoSend)
 	}
 	else
 	{
-		__NOP();
+		sprintf(bufferMsgForTXE_inLine[inLine], MsgtoSend);
+		inLine++;
 	}
 }
 
@@ -434,19 +428,38 @@ void USART1_IRQHandler(void)
 			//Desactivo la interrupcion
 			interruptionTX(ptrUSART1Used, USART_TX_INTERRUP_DISABLE);
 		}
-		else if((bufferMsgForTXE[posChar] != '\0') && typeWriteTXE == 1)
+		else if(typeWriteTXE == 1)
 		{
-			//transmitimos el caracter
-			ptrUSART1Used->DR = bufferMsgForTXE[posChar];
-			//aunmentamos la variable
-			posChar++;
-		}
-		else
-		{
-			//Desactivo la interrupcion
-			interruptionTX(ptrUSART1Used, USART_TX_INTERRUP_DISABLE);
-			//reiniciamos la variable
-			posChar = 0;
+			if (bufferMsgForTXE[posChar] != '\0')
+			{
+				//transmitimos el caracter
+				ptrUSART1Used->DR = bufferMsgForTXE[posChar];
+				//aunmentamos la variable
+				posChar++;
+			}
+			else
+			{
+				if (inLineTxe<inLine)
+				{
+//					//Limpiamos el String
+//					bufferMsgForTXE[] = {0};
+					//Guardamos el string que se desea enviar en un arreglo
+					sprintf(bufferMsgForTXE, bufferMsgForTXE_inLine[inLineTxe]);
+					//reiniciamos la variable
+					posChar = 0;
+					//aunmentamos la variable
+					inLineTxe++;
+				}
+				else
+				{
+					//Desactivo la interrupcion
+					interruptionTX(ptrUSART1Used, USART_TX_INTERRUP_DISABLE);
+					//reiniciamos la variable
+					posChar = 0;
+					inLineTxe = 0;
+					inLine = 0;
+				}
+			}
 		}
 	}
 	else

@@ -21,4 +21,7 @@ void configPLL(uint8_t clockSpeed);
 uint8_t getConfigPLL(void);
 uint8_t getClockAPB1(void);
 
+void configMCO1(uint8_t value);
+void configMCO1PRE(uint8_t value);
+
 #endif /* PLLDRIVER_H_ */

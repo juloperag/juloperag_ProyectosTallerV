@@ -17,6 +17,7 @@
 #include <SysTickDriver.h>
 #include <PwmDriver.h>
 #include <I2CDriver.h>
+#include <AdcDriver.h>
 #include <dsp/basic_math_functions.h>
 
 //-----------------------------------Fin de definicion de librerias------------------------------------------
@@ -48,6 +49,10 @@ GPIO_Handler_t handler_GPIO_PWM = {0};       //Definimos un elemento del tipo GP
 PWM_Handler_t handler_PWM = {0};
 uint8_t duttyporc = 10;                      //Variables para cambiar el duttycicle
 uint8_t estado = 0;
+
+//--------------------------ADC------------------------------
+ADC_Config_t  handler_ADC_Channel0 = {0};     //Definimos un elemento del tipo ADC_Config_t (Struct) para la conversion ADC
+uint16_t adcData = 0;                         //Variable que almacena el valor del ADC leido
 
 //-------------------------I2C--------------------------
 GPIO_Handler_t handler_GPIO_SCL_Acelerometro = {0};   //Definimos un elemento del tipo GPIO_Handler_t (Struct) y I2C_Handler_t para la comunicacion I2C
@@ -102,6 +107,11 @@ int main(void)
 				sprintf(bufferMsg,"El valor abs de %#.2f = %#.2f \n", value[0], valueAbs[0]);
 				//Enviamos por puerto serial dicho string
 				writeMsg(&handler_USART_USB, bufferMsg);
+
+				//-----------------------------Implementacion USART-ADC--------------------------------
+				sprintf(bufferMsg, "Data Canal 1: %u \n", adcData);
+				writeMsg(&handler_USART_USB, bufferMsg);
+
 				//reniciamos
 				charRead = '\0';
 			}
@@ -119,7 +129,6 @@ int main(void)
 		}
 		else
 		{
-			acelerometro_I2C();
 			__NOP();
 		}
 	}
@@ -291,6 +300,7 @@ void int_Hardware(void)
 
 	//-------------------Inicio de Configuracion I2Cx----------------------
 
+	//---------------I2C1----------------
 	//Definimos el I2Cx a usar
 	handler_I2C_Acelerometro.prtI2Cx = I2C1;
 	//Definimos la configuracion para el I2C
@@ -300,6 +310,20 @@ void int_Hardware(void)
 	i2c_Config(&handler_I2C_Acelerometro);
 
 	//---------------------Fin de Configuracion I2Cx----------------------
+
+	//-------------------Inicio configuracion ADC-----------------------
+
+	//---------------Channel_0----------------
+	 handler_ADC_Channel0.conversion.channelSequence_0 =  ADC_CHANNEL_0;
+	 handler_ADC_Channel0.sampling.samplingPeriodChannel_0 = ADC_SAMPLING_PERIOD_84_CYCLES;      //ADC_SAMPLING_PERIOD_x_CYCLES  x-> 3, 15, 28, 56, 84, 112, 144, 480
+	 handler_ADC_Channel0.resolution = ADC_RESOLUTION_12_BIT;                                    //ADC_RESOLUTION_x_BIT          x-> 8,6,10,12
+	 handler_ADC_Channel0.dataAlignment =  ADC_ALIGNMENT_RIGHT;                                  //ADC_ALIGNMENT_x               x-> RIGHT, LEFT
+	 handler_ADC_Channel0.externalEvent = ADC_EXTERNAL_EVENT_DISABLE;                            //ADC_EXTERNAL_EVENT_x          x-> DISABLE, RISING, FALLING, BOTH
+	 handler_ADC_Channel0.typeEXTEvent =  ADC_EVENT_TIMER_1_CC1;                                 //ADC_EVENT_TIMER_x_y           x-> 1, 2, 3, 4, 5 | y-> Depende
+	 adc_Config(&handler_ADC_Channel0);
+
+	//-------------------Fin configuracion ADC-----------------------
+
 }
 //------------------------------Fin Configuracion del microcontrolador------------------------------------------
 
@@ -311,6 +335,7 @@ void int_Hardware(void)
 void BasicTimer2_Callback(void)
 {
 	GPIOxTooglePin(&handler_BlinkyPin);
+	startSingleADC();
 }
 
 //-------------------------USARTRX--------------------------------
@@ -318,6 +343,13 @@ void BasicTimer2_Callback(void)
 void BasicUSART2_Callback(void)
 {
 	charRead = getRxData();
+}
+
+//-------------------------ADC--------------------------------
+//Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el ADC
+void adcComplete_Callback(void)
+{
+	adcData = getADC();
 }
 
 //-------------------------UserButton--------------------------------

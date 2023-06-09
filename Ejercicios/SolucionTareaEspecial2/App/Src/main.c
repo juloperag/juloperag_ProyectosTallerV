@@ -48,13 +48,6 @@ PWM_Handler_t handler_PWM_3 = {0};
 uint8_t duttyporc = 0;                         //Variables para cambiar el duttycicle
 uint8_t estado = 0;
 
-//-------------------------LCD----------------------------
-GPIO_Handler_t handler_GPIO_SCL_LCD = {0};   //Definimos un elemento del tipo GPIO_Handler_t (Struct) y I2C_Handler_t para la cconmunicacion con la LCD
-GPIO_Handler_t handler_GPIO_SDA_LCD = {0};
-I2C_Handler_t handler_I2C_LCD = {0};
-#define ACCEL_ADDRESSS_LCD  0b0100001;                //Definicion de la direccion del Sclave
-void int_ConfigLCD(void);                            //Funcion que realiza la configuracion inicial de la LCD y ademas escribe los primeros mensajes en la pantalla
-
 //-------------------------Acelerometro----------------------------
 GPIO_Handler_t handler_GPIO_SCL_Acelerometro = {0};   //Definimos un elemento del tipo GPIO_Handler_t (Struct) y I2C_Handler_t para la comunicacion I2C
 GPIO_Handler_t handler_GPIO_SDA_Acelerometro = {0};
@@ -84,7 +77,6 @@ void duttyAccel(PWM_Handler_t *prtPwmHandler, int16_t valueAccel); //Definimos l
 void conditionTxSampling(void);           //Funcion que almacena los datos capturados por 2s y luego los envia por comunicacion serial.
 void transmitAccel(char dataRead);       //Funcion que transmite por el puerto serial la informacion contenida en el arreglo del accel
 float convAccel(int16_t accelx);          //Funcion que convierte los valores guardados entregados por el acelerometro en valores en unidades m/s2
-void printLCDSampling(void);              //Funcion que envia los datos muestreados a la pantalla LCD
 void valueconfigacel(void);               //Funcion que obtenie los valores de la configuracion
 uint8_t statusTxSampling = 0;             //variable que activa la transmision del muestreo de datos
 uint16_t countingTXSampling = 0;          //variable que cuenta las veces que se a mandado el a enviado el muestreo
@@ -98,14 +90,11 @@ int main(void)
 	configPLL(clock);
 	//Realizamos la configuracuion inicial
 	int_Hardware();
-	//Activamos el SysTick
-	config_SysTick_us();
+
 	//Activamos el punto flotante por medio del registro especifico
 	SCB->CPACR |= 0xF <<20;
 	//Obtenemos los valores de configuracion
 	valueconfigacel();
-	//Inicializamos la pantalla y mostramos los valores inicailes
-	int_ConfigLCD();
 	//Definimos para el PIN un 1 logico,
 	GPIO_writePin (&handler_BlinkyPin, SET);
 
@@ -121,8 +110,6 @@ int main(void)
 			duttyAccel(&handler_PWM_1, accel[0]);
 			duttyAccel(&handler_PWM_2, accel[1]);
 			duttyAccel(&handler_PWM_3, accel[2]);
-			//Enviamos el valor de los muestreos a la pantalla LCD cada 1 S
-			printLCDSampling();
 			//Almacenamos o enviamos los datos muestreados
 			conditionTxSampling();
 			//Reiniciamos la variable
@@ -253,36 +240,6 @@ void int_Hardware(void)
 	//Cargamos la configuracion del PIN especifico
 	GPIO_Config(&handler_GPIO_PWM_3);
 
-	//---------------------------LCD--------------------------------
-	//---------------PIN: PB10----------------
-	//------------AF4: I2C2_SCL----------------
-	//Definimos el periferico GPIOx a usar.
-	handler_GPIO_SCL_LCD.pGPIOx = GPIOB;
-	//Definimos el pin a utilizar
-	handler_GPIO_SCL_LCD.GPIO_PinConfig.GPIO_PinNumber = PIN_10; 						//PIN_x, 0-15
-	//Definimos la configuracion de los registro para el pin seleccionado
-	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
-	GPIO_PIN_Config(&handler_GPIO_SCL_LCD, GPIO_MODE_ALTFN, GPIO_OTYPER_OPENDRAIN, GPIO_OSPEEDR_FAST, GPIO_PUPDR_NOTHING, AF4);
-	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
-	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
-	//Cargamos la configuracion del PIN especifico
-	GPIO_Config(&handler_GPIO_SCL_LCD);
-
-	//---------------PIN: PB3----------------
-	//------------AF9: I2C2_SDA----------------
-	//Definimos el periferico GPIOx a usar.
-	handler_GPIO_SDA_LCD.pGPIOx = GPIOB;
-	//Definimos el pin a utilizar
-	handler_GPIO_SDA_LCD.GPIO_PinConfig.GPIO_PinNumber = PIN_3; 						//PIN_x, 0-15
-	//Definimos la configuracion de los registro para el pin seleccionado
-	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
-	GPIO_PIN_Config(&handler_GPIO_SDA_LCD, GPIO_MODE_ALTFN, GPIO_OTYPER_OPENDRAIN, GPIO_OSPEEDR_FAST, GPIO_PUPDR_NOTHING, AF9);
-	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
-	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
-	//Cargamos la configuracion del PIN especifico
-	GPIO_Config(&handler_GPIO_SDA_LCD);
-
-
 	//---------------------------Acelerometro--------------------------------
 	//---------------PIN: PB8----------------
 	//------------AF4: I2C1_SCL----------------
@@ -410,52 +367,9 @@ void int_Hardware(void)
 	//Cargamos la configuracion
 	i2c_Config(&handler_I2C_Acelerometro);
 
-	//---------------I2C2----------------
-	//Definimos el I2Cx a usar
-	handler_I2C_LCD.prtI2Cx = I2C2;
-	//Definimos la configuracion para el I2C
-	handler_I2C_LCD.modeI2C = I2C_MODE_SM;                    //I2C_MODE_x  x->SM,FM
-	handler_I2C_LCD.slaveAddress = ACCEL_ADDRESSS_LCD ;       //Direccion del Sclave
-	//Cargamos la configuracion
-	i2c_Config(&handler_I2C_LCD);
-
-
-
 	//---------------------Fin de Configuracion I2Cx----------------------
 }
 //------------------------------Fin Configuracion del microcontrolador------------------------------------------
-
-//----------------------------Inicio de la Configuracion de la pantalla ---------------------------------------
-
-//Funcion que realiza la configuracion inicial de la LCD y ademas escribe los primeros mensajes en la pantalla
-void int_ConfigLCD(void)
-{
-	char bufferMsg[64] = {0};                      //Variable que almacena un strings
-	//Configuramos la LCD
-	lcd_i2c_init(&handler_I2C_LCD);
-   //Definimos la posicion del cursor en la pantalla y escribimos mensaje
-	lcd_i2c_gotoxy(&handler_I2C_LCD, 0, 0);
-	lcd_i2c_putc(&handler_I2C_LCD, "AC X:");
-	lcd_i2c_gotoxy(&handler_I2C_LCD, 0, 12);
-	lcd_i2c_putc(&handler_I2C_LCD, "m/s^2");
-	//Definimos la posicion del cursor en la pantalla y escribimos mensaje
-	lcd_i2c_gotoxy(&handler_I2C_LCD, 1, 0);
-	lcd_i2c_putc(&handler_I2C_LCD, "AC Y:");
-	lcd_i2c_gotoxy(&handler_I2C_LCD, 1, 12);
-	lcd_i2c_putc(&handler_I2C_LCD, "m/s^2");
-	//Definimos la posicion del cursor en la pantalla y escribimos mensaje
-	lcd_i2c_gotoxy(&handler_I2C_LCD, 2, 0);
-	lcd_i2c_putc(&handler_I2C_LCD, "AC Z:");
-	lcd_i2c_gotoxy(&handler_I2C_LCD, 2, 12);
-	lcd_i2c_putc(&handler_I2C_LCD, "m/s^2");
-	//Definimos la posicion del cursor en la pantalla y escribimos mensaje
-	lcd_i2c_gotoxy(&handler_I2C_LCD, 3, 0);
-	sprintf(bufferMsg,"Ran:%d g,%d LSB/g", configAccel[0],configAccel[1]);
-	lcd_i2c_putc(&handler_I2C_LCD, bufferMsg);
-
-}
-
-//---------------------------Fin de la Configuracion de la pantalla ---------------------------------------
 
 
 //----------------------------Inicio de la definicion de las funciones ISR---------------------------------------
@@ -504,31 +418,6 @@ void BasicUSART1_Callback(void)
 
 //----------------------------Inicio de la definicion de las funciones-----------------------------------------
 
-void printLCDSampling(void)
-{
-	if(timerLCDSampling>999)
-	{
-		char bufferMsg[64] = {0};                      //Variable que almacena un strings
-		//Definimos la posicion del cursor en la pantalla y escribimos mensaje
-		lcd_i2c_gotoxy(&handler_I2C_LCD, 0, 6);
-		sprintf(bufferMsg,"%#.2f ", convAccel(accel[0]));
-		lcd_i2c_putc(&handler_I2C_LCD, bufferMsg);
-		//Definimos la posicion del cursor en la pantalla y escribimos mensaje
-		lcd_i2c_gotoxy(&handler_I2C_LCD, 1, 6);
-		sprintf(bufferMsg,"%#.2f ", convAccel(accel[1]));
-		lcd_i2c_putc(&handler_I2C_LCD, bufferMsg);
-		//Definimos la posicion del cursor en la pantalla y escribimos mensaje
-		lcd_i2c_gotoxy(&handler_I2C_LCD, 2, 6);
-		sprintf(bufferMsg,"%#.2f ", convAccel(accel[2]));
-		lcd_i2c_putc(&handler_I2C_LCD, bufferMsg);
-		//Reiniciamos la variable
-		timerLCDSampling=0;
-	}
-	else
-	{
-		timerLCDSampling++;
-	}
-}
 
 //Funcion que obtenie los valores de la configuracion
 void valueconfigacel(void)
