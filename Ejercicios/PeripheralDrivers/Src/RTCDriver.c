@@ -72,21 +72,22 @@ void configRTC(RTC_Handler_t *rtcConfig)
 	}
 	//-------b) Configuramos los preescales------
 	RTC->PRER = 0; //Limpiamos el registro
-	RTC->PRER |= 256<<RTC_PRER_PREDIV_S_Pos;
-	RTC->PRER |= 128<<RTC_PRER_PREDIV_A_Pos;
+//	RTC->PRER |= 256<<RTC_PRER_PREDIV_S_Pos;
+//	RTC->PRER |= 128<<RTC_PRER_PREDIV_A_Pos;
+	RTC->PRER |= RTC_PRER_PREDIV_A;
+	RTC->PRER |= 0xFF<<RTC_PRER_PREDIV_S_Pos;
+
 	//-------c) Especificamos el formato de horas------
 	RTC->CR &= ~RTC_CR_FMT;	 //Definimos el formato de 24 horas
-	//-------d) Definimos los minutos,horas,segundos, etc ------
+	//-------d) Actviamos el acceso al los registros sombra------
+	RTC->CR |= RTC_CR_BYPSHAD;
+	//-------e) Definimos los minutos,horas,segundos, etc ------
 	timeConfigRTC(rtcConfig);
 	dateConfigRTC(rtcConfig);
-	//-------e) Finalizamos el modo de configuracion------
+	//-------f) desactivamos el acceso al los registros sombra------
+	RTC->CR &= ~RTC_CR_BYPSHAD;
+	//-------g) Finalizamos el modo de configuracion------
 	RTC->ISR &= ~RTC_ISR_INIT;
-	//Verificamos la correcta inicializacion del RTC
-	while(!(RTC->ISR & RTC_ISR_INITS))
-	{
-		__NOP();
-	}
-
 	//----------------------5) Activamos la proteccion de los registros--------------------------------------------
 	//Registro: WPR
 	RTC->WPR = 0xFF;
@@ -102,15 +103,15 @@ void timeConfigRTC(RTC_Handler_t *rtcConfig)
 	//segundos
 	uint8_t st = (rtcConfig->seg)/10;
 	RTC->TR |= st<<RTC_TR_ST_Pos;
-	RTC->TR |= (rtcConfig->seg-st)<<RTC_TR_SU_Pos;
+	RTC->TR |= (rtcConfig->seg-st*10)<<RTC_TR_SU_Pos;
 	//minutos
 	uint8_t mnt = (rtcConfig->min)/10;
 	RTC->TR |= mnt<<RTC_TR_MNT_Pos;
-	RTC->TR |= (rtcConfig->min-mnt)<<RTC_TR_MNU_Pos;
+	RTC->TR |= (rtcConfig->min-mnt*10)<<RTC_TR_MNU_Pos;
 	//horas
 	uint8_t ht = (rtcConfig->hour)/10;
 	RTC->TR |= ht<<RTC_TR_HT_Pos;
-	RTC->TR |= (rtcConfig->hour-ht)<<RTC_TR_HU_Pos;
+	RTC->TR |= (rtcConfig->hour-ht*10)<<RTC_TR_HU_Pos;
 }
 
 //Funcion que cambia los registros corrrespondientes a la fecha
@@ -121,18 +122,17 @@ void dateConfigRTC(RTC_Handler_t *rtcConfig)
 	//dia del mes
 	uint8_t dt = (rtcConfig->date)/10;
 	RTC->DR |= dt<<RTC_DR_DT_Pos;
-	RTC->DR |= (rtcConfig->date-dt)<<RTC_DR_DU_Pos;
+	RTC->DR |= (rtcConfig->date-dt*10)<<RTC_DR_DU_Pos;
 	//mes
 	uint8_t mt = (rtcConfig->month)/10;
 	RTC->DR |= mt<<RTC_DR_MT_Pos;
-	RTC->DR |= (rtcConfig->month-mt)<<RTC_DR_MU_Pos;
+	RTC->DR |= (rtcConfig->month-mt*10)<<RTC_DR_MU_Pos;
 	//dias de la semana
-	RTC->DR &= ~(0b111)<<RTC_DR_WDU_Pos;
 	RTC->DR |= (rtcConfig->dayWeek)<<RTC_DR_WDU_Pos;
 	//año
 	uint8_t yt = (rtcConfig->year)/10;
 	RTC->DR |= yt<<RTC_DR_YT_Pos;
-	RTC->DR |= (rtcConfig->year-yt)<<RTC_DR_YU_Pos;
+	RTC->DR |= (rtcConfig->year-yt*10)<<RTC_DR_YU_Pos;
 }
 
 
@@ -154,15 +154,14 @@ void updatetimeConfigRTC(RTC_Handler_t *rtcConfig, uint8_t newhour, uint8_t newm
 	rtcConfig->hour = newhour;
 	rtcConfig->min = newmin;
 	rtcConfig->seg = newseg;
+	//Actviamos el acceso al los registros sombra
+	RTC->CR |= RTC_CR_BYPSHAD;
 	//Cargamos los nuevos valores
 	timeConfigRTC(rtcConfig);
+	//Desactivamos el acceso al los registros sombra
+	RTC->CR &= ~RTC_CR_BYPSHAD;
 	//Finalizamos el modo de configuracion
 	RTC->ISR &= ~RTC_ISR_INIT;
-	//Verificamos la correcta inicializacion del RTC
-	while(!(RTC->ISR & RTC_ISR_INITS))
-	{
-		__NOP();
-	}
 	//Activamos la proteccion de los registros
 	RTC->WPR = 0xFF;
 }
@@ -186,15 +185,14 @@ void updateDateConfigRTC(RTC_Handler_t *rtcConfig, uint8_t newyear, uint8_t newm
 	rtcConfig->month = newmonth;
 	rtcConfig->date = newdate;
 	rtcConfig->dayWeek = newdayweek;
+	//Actviamos el acceso al los registros sombra
+	RTC->CR |= RTC_CR_BYPSHAD;
 	//Cargamos los nuevos valores
 	dateConfigRTC(rtcConfig);
+	//Desactivamos el acceso al los registros sombra
+	RTC->CR &= ~RTC_CR_BYPSHAD;
 	//Finalizamos el modo de configuracion
 	RTC->ISR &= ~RTC_ISR_INIT;
-	//Verificamos la correcta inicializacion del RTC
-	while(!(RTC->ISR & RTC_ISR_INITS))
-	{
-		__NOP();
-	}
 	//Activamos la proteccion de los registros
 	RTC->WPR = 0xFF;
 }

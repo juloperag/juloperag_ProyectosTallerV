@@ -19,7 +19,8 @@
 #include <PLLDriver.h>
 #include <RTCDriver.h>
 #include <AdcDriver.h>
-#include <dsp/basic_math_functions.h>
+//#include <dsp/basic_math_functions.h>
+#include <arm_math.h>
 
 //-----------------------------------Fin de definicion de librerias------------------------------------------
 GPIO_Handler_t handler_GPIO_Prueba = {0};       //Definimos un elemento del tipo GPIO_Handler_t (Struct) y USART_Handler_t para el uso del USB
@@ -52,11 +53,7 @@ uint8_t numberDayMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};  
 GPIO_Handler_t handler_GPIO_SCL_Acelerometro = {0};   //Definimos un elemento del tipo GPIO_Handler_t (Struct) y I2C_Handler_t para la comunicacion I2C
 GPIO_Handler_t handler_GPIO_SDA_Acelerometro = {0};
 I2C_Handler_t handler_I2C_Acelerometro = {0};
-BasicTimer_Handler_t handler_TIMER_Muestreo = {0};     //Definimos un elemento del tipo GPIO_Handler_t (Struct) para realizar el muestreo a 1Khz
-uint8_t stateSampling = 0;                             //Variable que controla el estado del muestreo de los ejes
-int16_t accel[3] = {0,0,0};                            //Arreglo que guarda la aceleracion de cada eje
-int16_t  configAccel[2] = {0,0};                      //Arreglo que almacena la configuracion del acelerometro
-int16_t accelTxSampling[2000][3] = {0};                 //Variable que controla el estado del muestreo de los ejes
+
 //-------Direcciones--------
 #define ACCEL_ADDRESSS_ACCEL  0b1101000;             //Definicion de la direccion del Sclave
 #define ACCEL_XOUT_H  0x3B                           //Definicion de la direccion de los registros del Sclave a usar
@@ -87,20 +84,33 @@ uint16_t adcPosArreglo = 0;                      //Elemento que guarda la posici
 uint8_t adcArregloChannel = 0;                  //Selecciona el arreglo correspondiente al canal respectivo
 
 //------------------Definiciones generales----------------------------------
-void conditionTxSampling(void);           //Funcion que almacena los datos capturados por 2s y luego los envia por comunicacion serial.
+BasicTimer_Handler_t handler_TIMER_signal_200Hz = {0};     //Definimos un elemento del tipo GPIO_Handler_t (Struct) para realizar una señal de 200Hz
+
 void conditionTxADC(void);                //Funcion que almacena los datos capturados por el ADC y luego los envia por comunicacion serial.
+void conditionFFT(void);                  //Funcion ejecutamos la FFT o enviamos los datos de la FFT
+void executionFFT(void);                  //Funcion que ejecuta la FFT
 float convAccel(int16_t accelx);          //Funcion que convierte los valores guardados entregados por el acelerometro en valores en unidades m/s2
 void int_MCO1(void);                      //Funcion para la configuracion inicail del MCO1
 uint8_t numberDayWeed(char *msg);         //Funcion que retorna el dia de la semana en numero
 void txdayWeed(uint8_t number);            //Funcion que envia por usart el dia de la semana
 
+uint8_t stastusTimer_200Hz = 0;           //Bandera que se usa como indicativo de la señal de 200Hz
+
 uint8_t stastusTxADC = 0;                 //variable que activa la transmision de datos arquiridos por ADC
-uint8_t stastusTimerTxADC = 0;           //primera variable para controlar el tiempo con que se envia los mensajes por USART
 uint16_t countingTxADC  = 0;             //variable que cuenta las veces que se a mandado lod datos del arreglo
-uint8_t  timerTxADC = 0;                 //Segunda variable para controlar el tiempo con que se envia los mensajes por USART
-uint8_t statusTxSampling = 0;             //variable que activa la transmision del muestreo de datos
-uint16_t countingTXSampling = 0;          //variable que cuenta las veces que se a mandado el a enviado el muestreo
-uint8_t  timerTXSampling = 0;              //Variable para controlar el tiempo con que se envia los mensajes por USART
+uint8_t  timerTxADC = 0;                 //variable para controlar el tiempo con que se envia los mensajes por USART del ADC
+
+#define size_Sampling  1024             //Definimos la cantidad de datos a tomar con el acelerometro
+uint8_t stateSampling_Accel = 0;          //Variable que controla el estado del muestreo de eje z
+uint16_t countingSampling = 0;            //variable que cuenta las veces que se a mandado el a enviado el muestreo
+float32_t accelSampling_Z[size_Sampling] = {0};//Arreglo para guardar los datos leidos por el Accel
+
+uint8_t stateFFT = 0;                     //Bandera para ejecutar la FFT para los datos del accel
+uint8_t timerTxFFT = 0;                   //variable para controlar el tiempo con que se envia los mensajes por USART de la FFT
+uint32_t countingTxFFT = 0;                //variable que cuenta las veces que se a mandado los datos del arreglo
+float32_t dateFFTSampling[size_Sampling] = {0};         //Arreglo que almacena los datos de la FFT luego de aplicales valor Absoluto
+uint32_t dateDominantFreq = 0;                //variable que guarda el dato de la frecuencia dominate de los datos muestreados por el acelerometro
+float32_t valueMaxFFT = 0;                //Variable que guarda el maximo valor de la FFT y por tanto la amplitud del armonico
 
 int main(void)
 {
@@ -117,20 +127,31 @@ int main(void)
 	while(1)
 	{
 		//Condicion para el muestreo de datos del acelerometro
-		if(stateSampling == 1)
+		if(stateSampling_Accel == 1 && stastusTimer_200Hz == 1)
 		{
 //			GPIO_writePin (&handler_GPIO_Prueba, SET);
-			//Realizamos el muestreo de los 3 ejes de accel
+			//Realizamos el muestreo del eje Z ejes de accel
 			acelerometro_I2C();
-			//Almacenamos o enviamos los datos muestreados
-			conditionTxSampling();
-			//Reiniciamos la variable
 //			GPIO_writePin (&handler_GPIO_Prueba, RESET);
-			stateSampling = 0;
+			//Reiniciamos variable
+			stastusTimer_200Hz = 0;
 		}
 		else
 		{
 		 __NOP();
+		}
+
+		///Verificamos para ejecutar la FFT e imprimirla
+		if((stateFFT==1 || stateFFT==2) && stastusTimer_200Hz == 1)
+		{
+			//Ejecutamos la FFT o enviamos los datos de la FFT
+			conditionFFT();
+			//Reniciamos la variable
+			stastusTimer_200Hz = 0;
+		}
+		else
+		{
+			__NOP();
 		}
 
 		///Verificamos para ejecuta el comando ingresando
@@ -146,12 +167,12 @@ int main(void)
 		}
 
 		///Verificamos para imprimir los datos
-		if(stastusTxADC == 1 && stastusTimerTxADC == 1)
+		if(stastusTxADC == 1 && stastusTimer_200Hz == 1)
 		{
 			//Enviamos datos por comunicacion serial
 			conditionTxADC();
 			//Reiniciamos variable
-			stastusTimerTxADC = 0;
+			 stastusTimer_200Hz = 0;
 		}
 		else
 		{
@@ -293,13 +314,13 @@ void int_Hardware(void)
 
 	//---------------TIM2----------------
 	//Definimos el TIMx a usar
-	handler_TIMER_Muestreo.ptrTIMx = TIM2;
+	handler_TIMER_signal_200Hz.ptrTIMx = TIM2;
 	//Definimos la configuracion del TIMER seleccionado
-	handler_TIMER_Muestreo.TIMx_Config.TIMx_periodcnt = BTIMER_PCNT_1ms; //BTIMER_PCNT_xus x->10,100/ BTIMER_PCNT_1ms
-	handler_TIMER_Muestreo.TIMx_Config.TIMx_mode = BTIMER_MODE_UP; // BTIMER_MODE_x x->UP, DOWN
-	handler_TIMER_Muestreo.TIMx_Config.TIMX_period = 5;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_TIMER_signal_200Hz.TIMx_Config.TIMx_periodcnt = BTIMER_PCNT_1ms; //BTIMER_PCNT_xus x->10,100/ BTIMER_PCNT_1ms
+	handler_TIMER_signal_200Hz.TIMx_Config.TIMx_mode = BTIMER_MODE_UP; // BTIMER_MODE_x x->UP, DOWN
+	handler_TIMER_signal_200Hz.TIMx_Config.TIMX_period = 5;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	//Cargamos la configuracion del TIMER especifico
-	BasicTimer_Config(&handler_TIMER_Muestreo);
+	BasicTimer_Config(&handler_TIMER_signal_200Hz);
 
 	//---------------TIM4----------------
 	//Definimos el TIMx a usar
@@ -322,14 +343,14 @@ void int_Hardware(void)
 	handler_PWM_1.config.periodcnt = BTIMER_PCNT_1us; //BTIMER_PCNT_xus x->1,10,100/ BTIMER_PCNT_1ms
 	handler_PWM_1.config.periodo = 100;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	handler_PWM_1.config.channel = PWM_CHANNEL_1;     //PWM_CHANNEL_x x->1,2,3,4
-	handler_PWM_1.config.duttyCicle = 30;          //Valor señal en alto
+	handler_PWM_1.config.duttyCicle = 8;          //Valor señal en alto
 	//Cargamos la configuracion
 	pwm_Config(&handler_PWM_1);
 
 	//---------------------Fin de Configuracion PWM_Channelx-----------------------
 
 
-	//-----------------------Inicio de Configuracion ADC----------------------
+	//-----------------------Inicio de Chhonfiguracion ADC----------------------
 
 	//Configuracion Multicanal
 	handler_ADC_canales.conversion.channelSequence_0 = ADC_CHANNEL_0;                           //ADC_CHANNEL_x                 x-> 0-16
@@ -364,12 +385,12 @@ void int_Hardware(void)
 
 	//Confiracion inicial del calendario
 	handler_RTC.seg = 0;
-	handler_RTC.min = 0;
-	handler_RTC.hour = 1;
-	handler_RTC.dayWeek = LUNES;
-	handler_RTC.date = 1;
-	handler_RTC.month = ENERO;
-	handler_RTC.year = 0;
+	handler_RTC.min = 45;
+	handler_RTC.hour = 21;
+	handler_RTC.dayWeek = DOMINGO;
+	handler_RTC.date = 11;
+	handler_RTC.month = JUNIO;
+	handler_RTC.year = 23;
 	//Cargamos la configuracion y inicializamos el RTC
 	configRTC(&handler_RTC);
 	//------------------------Fin de Configuracion del RTC-------------------------
@@ -399,24 +420,32 @@ void int_MCO1(void)
 //Funcion que recibe los caracteres del comando recibido
 void recepcionCommand(void)
 {
-	if(charRead == '&')
+	if (stastusTxADC == 0 && stateSampling_Accel==0 && stateFFT==0)
 	{
-		//Almacenamos el elemento nulo
-		bufferRecepcion[counterRecepcion] = '\0';
-		//Establecemos la bandera como alta
-		commandComplete = 1;
-		//Reiniciamos la variable
-		counterRecepcion = 0;
-		//Reiniciamos la variable
+		if(charRead == '&')
+		{
+			//Almacenamos el elemento nulo
+			bufferRecepcion[counterRecepcion] = '\0';
+			//Establecemos la bandera como alta
+			commandComplete = 1;
+			//Reiniciamos la variable
+			counterRecepcion = 0;
+			//Reiniciamos la variable
+		}
+		else
+		{
+			//Almacenamos los caracteres del comando en un arrelgo
+			bufferRecepcion[counterRecepcion] = charRead;
+			//Aumentamos en uno la posicion del arreglo
+			counterRecepcion++;
+			//Reiniciamos la variable
+		}
 	}
 	else
 	{
-		//Almacenamos los caracteres del comando en un arrelgo
-		bufferRecepcion[counterRecepcion] = charRead;
-		//Aumentamos en uno la posicion del arreglo
-		counterRecepcion++;
-		//Reiniciamos la variable
+		__NOP();
 	}
+
 }
 
 //Funcion que ejecuta el comando ingresando
@@ -438,14 +467,16 @@ void runCommand(char *prtcommand)
 	{
 		writeMsgForTXE(&handler_USART_USB, "Help Menu: \n");
 		writeMsgForTXE(&handler_USART_USB, "1) help  ---Imprime lista de comandos \n");
-		writeMsgForTXE(&handler_USART_USB, "2) MCO1 # ---Selecciona la señal de reloj que saldra del pin MCO1: #->0-2 (HSI,LSE,HSE,PLL) \n");
+		writeMsgForTXE(&handler_USART_USB, "2) MCO1 # ---Selecciona la señal de reloj que saldra del pin MCO1: #->0-3 (HSI,LSE,HSE,PLL) \n");
 		writeMsgForTXE(&handler_USART_USB, "3) MCO1PRE #  ---Selecciona el preescaler de la señal saliente del pin MCO1: #->1-5 \n");
 		writeMsgForTXE(&handler_USART_USB, "4) configTime # # #  ---Establece la hora, minutos, y segundos del RTC \n");
 		writeMsgForTXE(&handler_USART_USB, "5) configDate # # # msg ---Establece el año, mes, fecha y dia de la semana del RTC \n");
 		writeMsgForTXE(&handler_USART_USB, "6) showTime  ---Muestra el tiempo establecida en el RTC \n");
 		writeMsgForTXE(&handler_USART_USB, "7) showDate  ---Muestra la fecha establecida en el RTC \n");
-		writeMsgForTXE(&handler_USART_USB, "8) speedADC # ---Configura la velocidad de muestreo del ADC: #->valor en kHz \n");
+		writeMsgForTXE(&handler_USART_USB, "8) speedADC # ---Configura la velocidad de muestreo del ADC: #->(30000-105000 Hz) \n");
 		writeMsgForTXE(&handler_USART_USB, "9) startADC ---Inicia la toma de datos por parte del ADC, para los dos canales \n");
+		writeMsgForTXE(&handler_USART_USB, "10) startAccel ---Inicia la toma de datos por parte del Acelerometro a 200Hz \n");
+		writeMsgForTXE(&handler_USART_USB, "11) startFFT --Ejecucion de la transformada rapida de Fourier sobre los datos muestreados por Accel \n");
 	}
 
 
@@ -519,7 +550,7 @@ void runCommand(char *prtcommand)
 	//Establece la hora, minutos, y segundos del RTC
 	else if (strcmp(cmd, "configTime") == 0)
 	{
-		if (firtsParameter>=0 && firtsParameter<=24 && secondParameter>=0 && secondParameter<=60 && thirdParameter>=0 && thirdParameter<=60)
+		if (firtsParameter>=0 && firtsParameter<=23 && secondParameter>=0 && secondParameter<=59 && thirdParameter>=0 && thirdParameter<=59)
 		{
 			//Actualizamos el tiempo
 			 updatetimeConfigRTC(&handler_RTC, firtsParameter, secondParameter, thirdParameter);
@@ -538,7 +569,7 @@ void runCommand(char *prtcommand)
 	//Establece el año, mes, fecha y dia de la semana del RTC
 	else if (strcmp(cmd, "configDate") == 0)
 	{
-		if (firtsParameter>=0 && firtsParameter<=99 && secondParameter>=0 && secondParameter<=12 && thirdParameter>=1 && thirdParameter<=numberDayMonth[secondParameter-1])
+		if (firtsParameter>=0 && firtsParameter<=99 && secondParameter>=1 && secondParameter<=12 && thirdParameter>=1 && thirdParameter<=numberDayMonth[secondParameter-1])
 		{
 			//convertimos el dia de la semana en numero
 			uint8_t numberdayweek = numberDayWeed(userMsg);
@@ -592,35 +623,51 @@ void runCommand(char *prtcommand)
 		writeMsgForTXE(&handler_USART_USB, bufferMsg);
 		//Por ultimo mostramos el dia de la semana
 		txdayWeed(dayweekShow);
-
 	}
 
 	else if (strcmp(cmd, "speedADC") == 0)
 	{
-		if(firtsParameter>=2 && firtsParameter<=20)
+		if(firtsParameter>=3000 && firtsParameter<=105000)
 		{
 			//Obtenemos el periodo
-			uint8_t peridPwm = (1000/firtsParameter);
+			uint8_t peridPwm = (1000000/firtsParameter);
 			//Cargamos el valor del periodo y atualizamos el valor del DuttyCycle
 			updateFrequency(&handler_PWM_1,  peridPwm);
-			updateDuttyCyclePercentage(&handler_PWM_1, 30);
+//			updateDuttyCyclePercentage(&handler_PWM_1, 30);
 			//Enviamos mensaje de validacion
-			writeMsgForTXE(&handler_USART_USB, "Se actualizo la velocidad de muestreo dl ADC");
+			writeMsgForTXE(&handler_USART_USB, "Se actualizo la velocidad de muestreo del ADC \n");
 		}
 		else
 		{
 			//se imprime la invalidacion del parametro
-			writeMsgForTXE(&handler_USART_USB, "Valor de frecuencia fuera de rango");
+			writeMsgForTXE(&handler_USART_USB, "Valor de frecuencia fuera de rango \n");
 		}
 	}
 
 
 	else if (strcmp(cmd, "startADC") == 0)
 	{
-		//se imprime la invalidacion del parametro
-		writeMsgForTXE(&handler_USART_USB, "Muestreo de valores del ADC iniciado");
+		//se el inicio del muestreo
+		writeMsgForTXE(&handler_USART_USB, "Muestreo del ADC iniciado \n");
 		//Activar el TIMER y con ello el PWM
 		startPwmSignal(&handler_PWM_1);
+	}
+
+	else if (strcmp(cmd, "startAccel") == 0)
+	{
+		//se imprime el inicio del muestreo
+		writeMsgForTXE(&handler_USART_USB, "Muestreo del acelerometro iniciado \n");
+		writeMsgForTXE(&handler_USART_USB, "Tomando datos... \n");
+		//Activamos la bandera para empezar el muestreo
+		stateSampling_Accel = 1;
+	}
+
+	else if (strcmp(cmd, "startFFT") == 0)
+	{
+		//se imprime  la ejecucion del FFT
+		writeMsgForTXE(&handler_USART_USB, "Ejecucion de la FFT sobre los datos muestreados: \n");
+		//Activamos la bandera para ejecutar la FFT
+		stateFFT = 1;
 	}
 
 	else
@@ -645,8 +692,7 @@ void runCommand(char *prtcommand)
 //Definimos la funcion que se desea ejecutar cuando se genera la interrupcion por el TIM4
 void BasicTimer2_Callback(void)
 {
-//	stateSampling = 1;
-	stastusTimerTxADC = 1;
+	 stastusTimer_200Hz = 1;
 }
 
 //-------------------------BlinkyLed--------------------------------
@@ -704,21 +750,25 @@ void acelerometro_I2C(void)
 {
 	//Reseteamos el registro PWR_MGHT_L con el fin de asegurar que no se presente en el acelerometro en modo SLEEP o CYCLE
 	i2c_WriteSingleRegister(&handler_I2C_Acelerometro, PWR_MGMT_l, 0x00);
-	//Aceleracion del eje x
-	uint8_t AccelX_high = i2c_ReadSingleRegister(&handler_I2C_Acelerometro, ACCEL_XOUT_H);
-	uint8_t AccelX_low = i2c_ReadSingleRegister(&handler_I2C_Acelerometro, ACCEL_XOUT_L);
-	uint16_t AccelX = AccelX_high<<8 | AccelX_low;
-	accel[0] = (int16_t) AccelX;
-	//Aceleracion del eje y
-	uint8_t AccelY_high = i2c_ReadSingleRegister(&handler_I2C_Acelerometro, ACCEL_YOUT_H);
-	uint8_t AccelY_low = i2c_ReadSingleRegister(&handler_I2C_Acelerometro, ACCEL_YOUT_L);
-	uint16_t AccelY = AccelY_high<<8 | AccelY_low;
-	accel[1] = (int16_t) AccelY;
 	//Aceleracion del eje z
 	uint8_t AccelZ_high = i2c_ReadSingleRegister(&handler_I2C_Acelerometro, ACCEL_ZOUT_H);
 	uint8_t AccelZ_low = i2c_ReadSingleRegister(&handler_I2C_Acelerometro, ACCEL_ZOUT_L);
 	uint16_t AccelZ = AccelZ_high<<8 | AccelZ_low;
-	accel[2] = (int16_t) AccelZ;
+	//Verificamos el valor del contador
+	if(countingSampling<size_Sampling)
+	{
+		//Almaceno los datos de los eje z en el arreglo especifico para realizar la captura de datos
+		accelSampling_Z[countingSampling] = convAccel(AccelZ);
+		//Aunmento el valor del contador
+		countingSampling++;
+	}
+	else
+	{
+		countingSampling = 0;            //Reiniciamos el contador
+		stateSampling_Accel = 0;          //Definimos el estado dos del muestreo
+		//Imprimir mensaje de fin de muestreo
+		writeMsgForTXE(&handler_USART_USB, "Toma de datos finalizada \n");
+	}
 }
 
 //Funcion que almacena los datos capturados por el ADC y luego los envia por comunicacion serial.
@@ -733,7 +783,7 @@ void conditionTxADC(void)
 		if(countingTxADC<256)
 		{
 			//Enviamos mensaje
-			sprintf(bufferMsg,"Channel_1: %u, Channel_2: %u ", adcDataChannel_0[countingTxADC], adcDataChannel_1[countingTxADC]);
+			sprintf(bufferMsg,"Channel_1: %#.2f, Channel_2: %#.2f \n", ((adcDataChannel_0[countingTxADC]*3.3)/4095), (adcDataChannel_1[countingTxADC]*3.3)/4095);
 			writeMsgForTXE(&handler_USART_USB, bufferMsg);
 			//Aunmento el valor del contador
 			countingTxADC++;
@@ -754,54 +804,48 @@ void conditionTxADC(void)
 	}
 }
 
-
-
-//Funcion que almacena los datos capturados por 2s y luego los envia por comunicacion serial.
-void conditionTxSampling(void)
+//Funcion ejecutamos la FFT o enviamos los datos de la FFT
+void conditionFFT(void)
 {
-	if(statusTxSampling == 1)
+	//Definimos un string
+	char bufferMsg[64] = {0};
+
+	//Verificamos el estado de la bandera
+	if(stateFFT==1)
 	{
-		//Verificamos el valor del contador
-		if(countingTXSampling<2000)
-		{
-			//Almaceno los datos de los ejes en el arreglo especifico para realizar la captura de datos
-			accelTxSampling[countingTXSampling][0] = accel[0];
-			accelTxSampling[countingTXSampling][1] = accel[1];
-			accelTxSampling[countingTXSampling][2] = accel[2];
-			//Aunmento el valor del contador
-			countingTXSampling++;
-		}
-		else
-		{
-			countingTXSampling = 0;        //Reiniciamos el contador
-			statusTxSampling = 2;          //Definimos el estado dos del muestreo
-		}
+		//Ejecutamos la FFT
+		executionFFT();
 	}
-	else if (statusTxSampling==2)
+	else if(stateFFT==2)
 	{
-		//Por medio de una variable controlamos el tiempo para enviar exitosamente el mesanje con los muestreos
-		if(timerTXSampling>10)
+		//Por medio de una variable controlamos el tiempo para enviar exitosamente los datos de la arreglo de la FFT
+		if(timerTxFFT>0)
 		{
 			//Verificamos el valor del contador
-			if(countingTXSampling<2000)
+			if(countingTxFFT<(size_Sampling/2))
 			{
+				//Enviamos mensaje
+				sprintf(bufferMsg,"Valor de la FFT: %#.2f \n", dateFFTSampling[countingTxFFT]);
+				writeMsgForTXE(&handler_USART_USB, bufferMsg);
 				//Aunmento el valor del contador
-				countingTXSampling++;
+				countingTxFFT++;
 				//reiniciamos la variable
-				timerTXSampling = 0;
+				timerTxFFT = 0;
 			}
 			else
 			{
-				//reiniciamos las variables
-				timerTXSampling = 0;
-				countingTXSampling = 0;
-				statusTxSampling = 0;
-				charRead = '\0';
+				//Mostramos la frecuencia dominante con la conversion
+				sprintf(bufferMsg,"Frecuencia Dominante: %u Hz \n", (uint16_t) ((dateDominantFreq*200)/size_Sampling));
+				writeMsgForTXE(&handler_USART_USB, bufferMsg);
+				//reiniciamos las variables;
+				timerTxFFT= 0;
+				countingTxFFT = 0;
+				stateFFT = 0;
 			}
 		}
 		else
 		{
-			timerTXSampling++;
+			timerTxFFT++;
 		}
 	}
 	else
@@ -810,6 +854,51 @@ void conditionTxSampling(void)
 	}
 }
 
+//Funcion que ejecuta la FFT
+void executionFFT(void)
+{
+	uint16_t fftSize = size_Sampling;                                //Valor que indica la duracion del proceso RFFT/CIFFT.
+	float32_t complexsetFFT[size_Sampling] = {0};                   //Arreglo que guarda los elementos complejos de la FFT
+	float32_t abscomplexsetFFT[size_Sampling] = {0};                //Arreglo que guarda los elementos complejos de la FFT despues de aplicarles valor absoluto
+	arm_status statusInitFFT = ARM_MATH_ARGUMENT_ERROR;             //variable para indicar la correcta modificacio de la strut
+	arm_rfft_fast_instance_f32  config_Rfft_fast_f32 = {0};         //Struct de tipo arm_rfft_fast_instance_f32 que contiene la configuracion para la FFT
+	uint32_t posDateFFT = 0;                                        //Variable que recorre las posiciones del arreglo DateFFTSampling
+
+	//Cargamos la configuracion indicada a la struct de tipo arm_rfft_fast_instance_f32
+	statusInitFFT = arm_rfft_fast_init_f32(&config_Rfft_fast_f32, fftSize);
+
+	//Verificacion de la correcta modificacion de la struct
+	if (statusInitFFT == ARM_MATH_SUCCESS)
+	{
+		//Realizamos la FFT, recibe un arreglo de tipo float32_t de elementos reales y entrega un arreglo de elementos complejos
+		//Elementos:  X = { real[0], imag[0], real[1], imag[1], real[2], imag[2] ... real[(N/2)-1], imag[(N/2)-1}
+		arm_rfft_fast_f32(&config_Rfft_fast_f32, accelSampling_Z, complexsetFFT, 0);
+		//Funcion que devuelve el valor asolucto de un arreglo
+		arm_abs_f32(complexsetFFT, abscomplexsetFFT, fftSize);
+		//Tomamos los valores reales
+		for(uint32_t i=0; i<size_Sampling; i++)
+		{
+			if (i % 2)
+			{
+				//Guardamos los valores reales en un arreglo global ademas de la amplitud del armonico
+				dateFFTSampling[posDateFFT] = 2*abscomplexsetFFT[i];
+				//Sumamos a la variable
+				posDateFFT++;
+			}
+		}
+		//Definimos la frecuencia dominate sin conversion
+		arm_max_f32(dateFFTSampling, posDateFFT,  &valueMaxFFT, &dateDominantFreq);
+		//Cambiamos el estado de la bandera
+		stateFFT=2;
+	}
+	else
+	{
+		//Reiniciamos la bandera
+		stateFFT = 0;
+		//Enviamos mensaje
+		writeMsgForTXE(&handler_USART_USB, "Error en la configuracion de la FFT \n");
+	}
+}
 
 //Funcion que convierte los valores guardados entregados por el acelerometro en valores en unidades m/s2
 float32_t convAccel(int16_t accelx)
@@ -906,7 +995,6 @@ void txdayWeed(uint8_t number)
 	}
 	}
 }
-
 
 //--------------------------  --Fin de la definicion de las funciones------------------------------------------
 
