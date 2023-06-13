@@ -111,6 +111,7 @@ uint32_t countingTxFFT = 0;                //variable que cuenta las veces que s
 float32_t dateFFTSampling[size_Sampling] = {0};         //Arreglo que almacena los datos de la FFT luego de aplicales valor Absoluto
 uint32_t dateDominantFreq = 0;                //variable que guarda el dato de la frecuencia dominate de los datos muestreados por el acelerometro
 float32_t valueMaxFFT = 0;                //Variable que guarda el maximo valor de la FFT y por tanto la amplitud del armonico
+uint32_t fftSize = 1024;                                        //Valor que indica la duracion del proceso RFFT/CIFFT.
 
 int main(void)
 {
@@ -129,10 +130,10 @@ int main(void)
 		//Condicion para el muestreo de datos del acelerometro
 		if(stateSampling_Accel == 1 && stastusTimer_200Hz == 1)
 		{
-//			GPIO_writePin (&handler_GPIO_Prueba, SET);
+			GPIO_writePin (&handler_GPIO_Prueba, SET);
 			//Realizamos el muestreo del eje Z ejes de accel
 			acelerometro_I2C();
-//			GPIO_writePin (&handler_GPIO_Prueba, RESET);
+			GPIO_writePin (&handler_GPIO_Prueba, RESET);
 			//Reiniciamos variable
 			stastusTimer_200Hz = 0;
 		}
@@ -191,18 +192,18 @@ void int_Hardware(void)
 
 	//-------------------Inicio de Configuracion GPIOx-----------------------
 
-//	//---------------PIN: PC0----------------
-//	//Definimos el periferico GPIOx a usar.
-//	handler_GPIO_Prueba.pGPIOx = GPIOC;
-//	//Definimos el pin a utilizar
-//	handler_GPIO_Prueba.GPIO_PinConfig.GPIO_PinNumber = PIN_0; 						//PIN_x, 0-15
-//	//Definimos la configuracion de los registro para el pin seleccionado
-//	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
-//	GPIO_PIN_Config(&handler_GPIO_Prueba, GPIO_MODE_OUT, GPIO_OTYPER_PUSHPULL, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF0);
-//	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
-//	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
-//	//Cargamos la configuracion del PIN especifico
-//	GPIO_Config(&handler_GPIO_Prueba);
+	//---------------PIN: PC0----------------
+	//Definimos el periferico GPIOx a usar.
+	handler_GPIO_Prueba.pGPIOx = GPIOC;
+	//Definimos el pin a utilizar
+	handler_GPIO_Prueba.GPIO_PinConfig.GPIO_PinNumber = PIN_0; 						//PIN_x, 0-15
+	//Definimos la configuracion de los registro para el pin seleccionado
+	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
+	GPIO_PIN_Config(&handler_GPIO_Prueba, GPIO_MODE_OUT, GPIO_OTYPER_PUSHPULL, GPIO_OSPEEDR_MEDIUM, GPIO_PUPDR_NOTHING, AF0);
+	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
+	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
+	//Cargamos la configuracion del PIN especifico
+	GPIO_Config(&handler_GPIO_Prueba);
 
 	//---------------------------BlinkyLed--------------------------------
 	//---------------PIN: PH1----------------
@@ -318,7 +319,7 @@ void int_Hardware(void)
 	//Definimos la configuracion del TIMER seleccionado
 	handler_TIMER_signal_200Hz.TIMx_Config.TIMx_periodcnt = BTIMER_PCNT_1ms; //BTIMER_PCNT_xus x->10,100/ BTIMER_PCNT_1ms
 	handler_TIMER_signal_200Hz.TIMx_Config.TIMx_mode = BTIMER_MODE_UP; // BTIMER_MODE_x x->UP, DOWN
-	handler_TIMER_signal_200Hz.TIMx_Config.TIMX_period = 5;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_TIMER_signal_200Hz.TIMx_Config.TIMX_period = 3;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	//Cargamos la configuracion del TIMER especifico
 	BasicTimer_Config(&handler_TIMER_signal_200Hz);
 
@@ -328,7 +329,7 @@ void int_Hardware(void)
 	//Definimos la configuracion del TIMER seleccionado
 	handler_BlinkyTimer.TIMx_Config.TIMx_periodcnt = BTIMER_PCNT_1ms; //BTIMER_PCNT_xus x->10,100/ BTIMER_PCNT_1ms
 	handler_BlinkyTimer.TIMx_Config.TIMx_mode = BTIMER_MODE_UP; // BTIMER_MODE_x x->UP, DOWN
-	handler_BlinkyTimer.TIMx_Config.TIMX_period = 250;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_BlinkyTimer.TIMx_Config.TIMX_period = 248;//Al definir 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	//Cargamos la configuracion del TIMER especifico
 	BasicTimer_Config(&handler_BlinkyTimer);
 
@@ -385,10 +386,10 @@ void int_Hardware(void)
 
 	//Confiracion inicial del calendario
 	handler_RTC.seg = 0;
-	handler_RTC.min = 45;
-	handler_RTC.hour = 21;
-	handler_RTC.dayWeek = DOMINGO;
-	handler_RTC.date = 11;
+	handler_RTC.min = 20;
+	handler_RTC.hour = 20;
+	handler_RTC.dayWeek = LUNES;
+	handler_RTC.date = 12;
 	handler_RTC.month = JUNIO;
 	handler_RTC.year = 23;
 	//Cargamos la configuracion y inicializamos el RTC
@@ -758,7 +759,7 @@ void acelerometro_I2C(void)
 	if(countingSampling<size_Sampling)
 	{
 		//Almaceno los datos de los eje z en el arreglo especifico para realizar la captura de datos
-		accelSampling_Z[countingSampling] = convAccel(AccelZ);
+		accelSampling_Z[countingSampling] =  convAccel(AccelZ);
 		//Aunmento el valor del contador
 		countingSampling++;
 	}
@@ -835,7 +836,7 @@ void conditionFFT(void)
 			else
 			{
 				//Mostramos la frecuencia dominante con la conversion
-				sprintf(bufferMsg,"Frecuencia Dominante: %u Hz \n", (uint16_t) ((dateDominantFreq*200)/size_Sampling));
+				sprintf(bufferMsg,"Frecuencia Dominante: %#.4f Hz \n",  (float32_t) (dateDominantFreq*200)/(fftSize));
 				writeMsgForTXE(&handler_USART_USB, bufferMsg);
 				//reiniciamos las variables;
 				timerTxFFT= 0;
@@ -857,7 +858,6 @@ void conditionFFT(void)
 //Funcion que ejecuta la FFT
 void executionFFT(void)
 {
-	uint16_t fftSize = size_Sampling;                                //Valor que indica la duracion del proceso RFFT/CIFFT.
 	float32_t complexsetFFT[size_Sampling] = {0};                   //Arreglo que guarda los elementos complejos de la FFT
 	float32_t abscomplexsetFFT[size_Sampling] = {0};                //Arreglo que guarda los elementos complejos de la FFT despues de aplicarles valor absoluto
 	arm_status statusInitFFT = ARM_MATH_ARGUMENT_ERROR;             //variable para indicar la correcta modificacio de la strut
@@ -880,7 +880,7 @@ void executionFFT(void)
 		{
 			if (i % 2)
 			{
-				//Guardamos los valores reales en un arreglo global ademas de la amplitud del armonico
+				//Guardamos los valores reales en un arr2048eglo global ademas de la amplitud del armonico
 				dateFFTSampling[posDateFFT] = 2*abscomplexsetFFT[i];
 				//Sumamos a la variable
 				posDateFFT++;
