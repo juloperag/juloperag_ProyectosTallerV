@@ -18,6 +18,9 @@
 
 //Definicion de cabeceras
 void configPLL(uint8_t clockSpeed);
+
+void adjustHSI(void);
+
 uint8_t getConfigPLL(void);
 uint8_t getClockAPB1(void);
 

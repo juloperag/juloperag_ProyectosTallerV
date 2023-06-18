@@ -104,160 +104,197 @@ int main(void)
 
 	while(1)
 	{
-		//-----------------------Interfaz Inicial-----------------------------------
-		//funcion que se encarga de ejecutarla la interfaz inicial
-		InterfaceStart(&handler_USB, canRecipiente);
-
-		//-----------------------Pausa inicial-----------------------------------
-		//Realizamos una pausa acompañada de la activacion del buzzer activo para indicar el inicio de la operacion
-		GPIO_writePin (&handler_GPIO_Buzzer, SET);
-		delay_ms(2000);
-		GPIO_writePin (&handler_GPIO_Buzzer, RESET);
-		delay_ms(250);
-
-		//---------------------Operacion de separacion-----------------------------------
-		GPIO_writePin (&handler_GPIO_MPP_DIR, RESET); //Definimos el sentido de giro
-		boolOperacion = 1; //se define un valor alto
-		movState = 1; //se define un valor alto
-		pos_canRec = 0; //Se define la primera pocision
-		contador = 0;   //Reiniciamos la variable
-
-		//Enviamos un mensaje que indica el inicio de la Separacion de elementos
-		writeMsg(&handler_USB, "Separacion de Elementos \n");  //Enviamos mensaje
-
-		while(boolOperacion)
+		//Condicional switch para ejecutar la accion requerida de la etapa
+		switch (obtainStage())
 		{
-
-			/*El brazo del servo se establece x grados, con lo cual el sistema de transmision se engancha
-			 * con el engranaje del Disco Superior.
-			*/
-			control_Servo(1);
-			delay_ms(2000);
-			//Se envia el mensaje que indica en que recipiente esta la operacion
-			InterfaceOperation(&handler_USB, 1, pos_canRec, 0);
-			 //Variable que guarda el valor anterior a la cantidad de elementos que pasa delante del sensor
-			uint8_t cantidadAnt = contador+1;
-
-			//El MPP se mueve cada 10 pasos por cada ciclo While. Se detiene cuando se cumpla la cantidad deseada de elementos.
-			while(movState)
+			//-----------------------Interfaz de seleccion-----------------------------------
+			case 0:
 			{
-				control_MPP();
-				if (contador!=cantidadAnt)
-				{
-					//Se muestra la cantidad faltante de elmentos para el respectivo recipiente
-					InterfaceOperation(&handler_USB, 2, pos_canRec, (canRecipiente[pos_canRec]-contador));
-					//Guardamos la cantidad actual de elemntos contados
-					cantidadAnt = contador;
-				}
-				else
-				{
-					__NOP();
-				}
-				//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
-				InterfaceOperation(&handler_USB, 3, pos_canRec, 0);
+				InterfaceStart(&handler_USB);
+
+				break;
 			}
-			movState = 1; //se define un valor alto
-			contador = 0;   //Reiniciamos la variable
-
-			if(pos_canRec<(amountContainers()-1))
+			//-----------------------Interfaz de configuracion-----------------------------------
+			case 1:
+			case 2:
+			case 3:
 			{
+				//funcion que se encarga de ejecutarla la interfaz inicial
+				InterfaceConfigContainer(&handler_USB, canRecipiente);
+				//Realizamos una pausa acompañada de la activacion del buzzer activo para indicar el inicio de la operacion
+				break;
+			}
+			//---------------------Operacion de separacion-----------------------------------
+			case 4:
+			{
+				//-----------------------Pausa inicial operacion-----------------------------------
+				GPIO_writePin (&handler_GPIO_Buzzer, SET);
+				delay_ms(2000);
+				GPIO_writePin (&handler_GPIO_Buzzer, RESET);
+				delay_ms(250);
+
+				GPIO_writePin (&handler_GPIO_MPP_DIR, RESET); //Definimos el sentido de giro
+				boolOperacion = 1; //se define un valor alto
+				movState = 1; //se define un valor alto
+				pos_canRec = 0; //Se define la primera pocision
+				contador = 0;   //Reiniciamos la variable
+
+				//Enviamos un mensaje que indica el inicio de la Separacion de elementos
+				writeMsg(&handler_USB, "Separacion de Elementos \n");  //Enviamos mensaje
+
+				while(boolOperacion)
+				{
+
+					/*El brazo del servo se establece x grados, con lo cual el sistema de transmision se engancha
+					 * con el engranaje del Disco Superior.
+					*/
+					control_Servo(1);
+					delay_ms(2000);
+					//Se envia el mensaje que indica en que recipiente esta la operacion
+					InterfaceOpeCounting(&handler_USB, 1, pos_canRec);
+					 //Variable que guarda el valor anterior a la cantidad de elementos que pasa delante del sensor
+					uint8_t cantidadAnt = contador+1;
+
+					//El MPP se mueve cada 10 pasos por cada ciclo While. Se detiene cuando se cumpla la cantidad deseada de elementos.
+					while(movState && obtainStage()==4)
+					{
+						control_MPP();
+						if (contador!=cantidadAnt)
+						{
+							//Se muestra la cantidad faltante de elmentos para el respectivo recipiente
+							InterfaceOpeCounting(&handler_USB, 2, (canRecipiente[pos_canRec]-contador));
+							//Guardamos la cantidad actual de elemntos contados
+							cantidadAnt = contador;
+						}
+						else
+						{
+							__NOP();
+						}
+						//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
+						InterfaceOpeCounting(&handler_USB, 3, 0);
+					}
+					movState = 1; //se define un valor alto
+					contador = 0;   //Reiniciamos la variable
+
+					if(pos_canRec<(amountContainers()-1) && obtainStage()==4)
+					{
+						/*El brazo del servo se establece 0 grados, con lo cual el sistema de transmision se engancha
+						* con el engranaje del Disco Inferior.
+						 */
+						control_Servo(2);
+						delay_ms(2000);
+
+						//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
+						for(uint8_t u=1; u<6; u++)
+						{
+							control_MPP();
+							//Definimos un estado de operacion
+							InterfaceOpeCounting(&handler_USB, 4, 1);
+							//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
+							InterfaceOpeCounting(&handler_USB, 3, 0);
+						}
+						//Definimos un estado de operacion
+						InterfaceOpeCounting(&handler_USB, 4, 0);
+						//Cambiamos la poscion de la cantidad a la siguiente
+						pos_canRec++;
+					}
+					else if(obtainStage()==5)
+					{
+						//Bajamos la variable de control
+						boolOperacion=0;
+					}
+					else
+					{
+						//Bajamos la variable de control
+						boolOperacion=0;
+						//definimos una tecla para cambiar la etapa
+						tecla='E';
+						//funcion que ejecuta una operacion de la interface deacuerdo a la tecla presionada
+						executeChar(&handler_USB, tecla);
+					}
+				}
+				//-----------------------Pausa final operacion-----------------------------------
+				//Realizamos una pausa acompañada de la activacion del buzzer activo para indicar el fin de la operacion
+				GPIO_writePin (&handler_GPIO_Buzzer, SET);
+				delay_ms(2000);
+				GPIO_writePin (&handler_GPIO_Buzzer, RESET);
+				delay_ms(250);
+				break;
+			}
+			//---------------------Operacion de Seleccion recipiente-----------------------------------
+			case 5:
+			{
+				//Cargamos la posicion del recipiente al number_Containers
+				defineSelectedContainers(pos_canRec);
 				/*El brazo del servo se establece 0 grados, con lo cual el sistema de transmision se engancha
 				* con el engranaje del Disco Inferior.
 				 */
 				control_Servo(2);
 				delay_ms(2000);
+				//Definimos una variable para guarda la posicion de los recipientes anteriores
+				uint8_t posant_Recipiente = pos_canRec;
+				tecla='\0';             //Reiniciamos la variable
+				boolOperacion = 1;  //Establecemos un valor alto
 
-				//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
-				for(uint8_t u=1; u<6; u++)
+				//Enviamos un mensaje que indica el inicio de la seleccion
+				writeMsg(&handler_USB, "Seleccion de recipientes \n");  //Enviamos mensaje
+				//Se envia el mensaje que indica en que recipiente se seleccion
+				InterfaceOpeSelectedCon(&handler_USB, 1);
+
+				//Ciclo while de la interfaz final
+				while(boolOperacion)
 				{
-					control_MPP();
-					//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
-					InterfaceOperation(&handler_USB, 3, pos_canRec, 0);
-				}
-				//Cambiamos la poscion de la cantidad a la siguiente
-				pos_canRec++;
-			}
-			else
-			{
-				boolOperacion=0;
-			}
+					uint8_t pos_Recipiente = 0;          //Definimos una variable para guarda la posicion de los recipientes
 
-		}
+					//Ejecutamos la funcion de la interfaz de seleccion y ademas guardamos la posicion de los recipientes definida por KeyPad
+					pos_Recipiente = InterfaceOpeSelectedCon(&handler_USB, 2);
 
-		//-----------------------Pausa final-----------------------------------
-		//Realizamos una pausa acompañada de la activacion del buzzer activo para indicar el fin de la operacion
-		GPIO_writePin (&handler_GPIO_Buzzer, SET);
-		delay_ms(2000);
-		GPIO_writePin (&handler_GPIO_Buzzer, RESET);
-		delay_ms(250);
-
-		//-------------------Interfaz Final + Movimiento Disco Inferior-----------------------------------
-		//Cargamos la posicion de los recipiente al number_Containers
-		definenumberContainers(pos_canRec);
-		/*El brazo del servo se establece 0 grados, con lo cual el sistema de transmision se engancha
-		* con el engranaje del Disco Inferior.
-		 */
-		control_Servo(2);
-		delay_ms(2000);
-		//Definimos una variable para guardad la posicion de los recipientes anteriores
-		uint8_t posant_Recipiente = pos_canRec;
-		tecla='\0';             //Reiniciamos la variable
-		boolInterfaceEnd = 1;  //Establecemos un valor alto
-
-		//Enviamos un mensaje que indica el inicio de la seleccion
-		writeMsg(&handler_USB, "Seleccion de recipientes \n");  //Enviamos mensaje
-		//Se envia el mensaje que indica en que recipiente se seleccion
-		InterfaceOperation(&handler_USB, 1, pos_canRec, 0);
-
-		//Ciclo while de la interfaz final
-		while(boolInterfaceEnd)
-		{
-			uint8_t pos_Recipiente = 0;          //Definimos una variable para guarda la posicion de los recipientes
-
-			//Ejecutamos la funcion de la interfazfinal y ademas guardamos la posicion de los recipientes definida por KeyPad
-			pos_Recipiente = InterfaceEnd(&handler_USB);
-
-			//Verificamos si la tecla presionada fue Ent, con ello salimos del ciclo while
-			if(tecla=='E')
-			{
-				boolInterfaceEnd = 0;
-			}
-			else
-			{
-				//veficamos si el valor definido de la posicion actual de los recipientes disminuyo
-				if(pos_Recipiente<posant_Recipiente)
-				{
-					GPIO_writePin (&handler_GPIO_MPP_DIR, SET); //Definimos el sentido de giro
-					//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
-					for(uint8_t u=1; u<6; u++)
+					//Verificamos si la tecla presionada fue Ent, con ello salimos del ciclo while
+					if(obtainStage()==0)
 					{
-						control_MPP();
-						//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
-						InterfaceOperation(&handler_USB, 3, pos_canRec, 0);
+						boolOperacion = 0;
 					}
-
-					posant_Recipiente=pos_Recipiente;
-				}
-				else if(pos_Recipiente>posant_Recipiente)
-				{
-					//veficamos si el valor definido de la posicion actual de los recipientes aunmento
-					GPIO_writePin (&handler_GPIO_MPP_DIR, RESET); //Definimos el sentido de giro
-					//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
-					for(uint8_t u=1; u<6; u++)
+					else
 					{
-						control_MPP();
-						//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
-						InterfaceOperation(&handler_USB, 3, pos_canRec, 0);
+						//veficamos si el valor definido de la posicion actual de los recipientes disminuyo
+						if(pos_Recipiente<posant_Recipiente)
+						{
+							GPIO_writePin (&handler_GPIO_MPP_DIR, SET); //Definimos el sentido de giro
+							//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
+							for(uint8_t u=1; u<6; u++)
+							{
+								control_MPP();
+								//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
+								InterfaceOpeSelectedCon(&handler_USB, 3);
+							}
+
+							posant_Recipiente=pos_Recipiente;
+						}
+						else if(pos_Recipiente>posant_Recipiente)
+						{
+							//veficamos si el valor definido de la posicion actual de los recipientes aunmento
+							GPIO_writePin (&handler_GPIO_MPP_DIR, RESET); //Definimos el sentido de giro
+							//El MPP se mueve 50 pasos lo que equivale a que el disco inferior se mueva 60°
+							for(uint8_t u=1; u<6; u++)
+							{
+								control_MPP();
+								//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
+								InterfaceOpeSelectedCon(&handler_USB, 3);
+							}
+							posant_Recipiente=pos_Recipiente;
+						}
+						else
+						{
+							__NOP();
+						}
 					}
-					posant_Recipiente=pos_Recipiente;
 				}
-				else
-				{
-					__NOP();
-				}
+			}
+			default:
+			{
+				break;
 			}
 		}
-
 	}
 
 	return 0;

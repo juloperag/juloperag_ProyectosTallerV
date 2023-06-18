@@ -31,11 +31,8 @@ void configPLL(uint8_t clockSpeed)
 
 	//---------------------------------1) Calibracion HSI------------------------------------------
 	//Registro: CR
-	//0b01100;
-	uint8_t hsiTrimValue = 0b01100; //Variable de 5 bit usado para la calibracion deñ HSI
 
-	RCC->CR &= ~(0b11111<<RCC_CR_HSITRIM_Pos);                //Limpiamos el campo
-	RCC->CR |= hsiTrimValue<<RCC_CR_HSITRIM_Pos;            //Cargamos la calibracion
+	adjustHSI();
 
 	//-------------2) Seleccion del HSI como la fuente de reloj para el PLL---------------
 	//Registro: PLLCFGR
@@ -99,6 +96,16 @@ void configPLL(uint8_t clockSpeed)
 
 	RCC->CFGR |= (0b10<<RCC_CFGR_SW_Pos);
 
+}
+
+//Funcion para ajustar el HSI
+void adjustHSI(void)
+{
+	//0b01100;
+	uint8_t hsiTrimValue = 0b01100; //Variable de 5 bit usado para la calibracion deñ HSI
+
+	RCC->CR &= ~(0b11111<<RCC_CR_HSITRIM_Pos);                //Limpiamos el campo
+	RCC->CR |= hsiTrimValue<<RCC_CR_HSITRIM_Pos;            //Cargamos la calibracion
 }
 
 //Funcion que retorna la velocidad de reloj entregado por el PLL o por el HSI en MHz
