@@ -86,7 +86,7 @@ char tecla = 'A';                           //Variable para guardar el char
 GPIO_Handler_t handler_GPIO_SCL_LCD = {0};   //Definimos un elemento del tipo GPIO_Handler_t (Struct) y I2C_Handler_t para la cconmunicacion con la LCD
 GPIO_Handler_t handler_GPIO_SDA_LCD = {0};
 I2C_Handler_t handler_I2C_LCD = {0};
-#define ACCEL_ADDRESSS_LCD  0b0100001;                //Definicion de la direccion del Sclave
+#define ACCEL_ADDRESSS_LCD  0b0100111;                //Definicion de la direccion del Sclave
 void int_ConfigLCD(void);                            //Funcion que realiza la configuracion inicial de la LCD y ademas escribe los primeros mensajes en la pantalla
 
 //------------------Definiciones generales----------------------------------
@@ -94,8 +94,6 @@ uint8_t boolOperacion = 1;                   //Variable para el control del cicl
 
 int main(void)
 {
-	//Ajustar HSI
-	adjustHSI();
 	//Realizamos la configuracuion inicial
 	int_Hardware();
 	//Activamos el SysTick
@@ -124,7 +122,12 @@ int main(void)
 			//-----------------------Interfaz de seleccion-----------------------------------
 			case 0:
 			{
-				InterfaceStart(&handler_I2C_LCD);
+				InterfaceStart(&handler_I2C_LCD, canRecipiente);
+				//Reiniciamos el conteo
+				for(uint8_t i=0;i<6;i++)
+				{
+					conRecipiente[i]=0;
+				}
 
 				break;
 			}
@@ -153,9 +156,6 @@ int main(void)
 				pos_canRec = 0; //Se define la primera pocision
 				contador = 0;   //Reiniciamos la variable
 
-				//Enviamos un mensaje que indica el inicio de la Separacion de elementos
-				msgInterface(&handler_I2C_LCD);
-
 				while(boolOperacion)
 				{
 					//Se envia el mensaje que indica en que recipiente esta la operacion y la cantidad de elemtos que falta
@@ -164,8 +164,8 @@ int main(void)
 					/*El brazo del servo se establece x grados, con lo cual el sistema de transmision se engancha
 					 * con el engranaje del Disco Superior.
 					*/
-					control_Servo(1);
-					delay_ms(2000);
+					control_Servo(2);
+					delay_ms(250);
 					 //Variable que guarda el valor anterior a la cantidad de elementos que pasa delante del sensor
 					uint8_t cantidadAnt = contador+1;
 
@@ -197,8 +197,8 @@ int main(void)
 						/*El brazo del servo se establece 0 grados, con lo cual el sistema de transmision se engancha
 						* con el engranaje del Disco Inferior.
 						 */
-						control_Servo(2);
-						delay_ms(2000);
+						control_Servo(1);
+						delay_ms(250);
 
 						//Enviamos un mensaje que indica el movimiento del disco
 						InterfaceOpeCounting(&handler_I2C_LCD, 5, 0, 0);
@@ -247,8 +247,8 @@ int main(void)
 				/*El brazo del servo se establece 0 grados, con lo cual el sistema de transmision se engancha
 				* con el engranaje del Disco Inferior.
 				 */
-				control_Servo(2);
-				delay_ms(2000);
+				control_Servo(1);
+				delay_ms(250);
 				//Definimos una variable para guarda la posicion de los recipientes anteriores
 				uint8_t posant_Recipiente = pos_canRec;
 				tecla='\0';             //Reiniciamos la variable
@@ -398,7 +398,7 @@ void int_Hardware(void)
 	handler_GPIO_SDA_LCD.GPIO_PinConfig.GPIO_PinNumber = PIN_9; 						//PIN_x, 0-15
 	//Definimos la configuracion de los registro para el pin seleccionado
 	// Orden de elementos: (Struct, Mode, Otyper, Ospeedr, Pupdr, AF)
-	GPIO_PIN_Config(&handler_GPIO_SDA_LCD, GPIO_MODE_ALTFN, GPIO_OTYPER_OPENDRAIN, GPIO_OSPEEDR_FAST, GPIO_PUPDR_NOTHING, AF9);
+	GPIO_PIN_Config(&handler_GPIO_SDA_LCD, GPIO_MODE_ALTFN, GPIO_OTYPER_OPENDRAIN, GPIO_OSPEEDR_FAST, GPIO_PUPDR_NOTHING, AF4);
 	/*Opciones: GPIO_Tipo_x, donde x--->||IN, OUT, ALTFN, ANALOG ||| PUSHPULL, OPENDRAIN |||
 	 * ||| LOW, MEDIUM, FAST, HIGH ||| NOTHING, PULLUP, PULLDOWN, RESERVED |||  AFx, 0-15 |||*/
 	//Cargamos la configuracion del PIN especifico
@@ -598,7 +598,7 @@ void int_Hardware(void)
 	handler_PWM_Servo.config.periodcnt = BTIMER_PCNT_10us; //BTIMER_PCNT_xus x->1,10,100/ BTIMER_PCNT_1ms
 	handler_PWM_Servo.config.periodo = 2000;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	handler_PWM_Servo.config.channel = PWM_CHANNEL_1;     //PWM_CHANNEL_x x->1,2,3,4
-	handler_PWM_Servo.config.duttyCicle = 100;             ///Valor en tiempo de la señal en alto
+	handler_PWM_Servo.config.duttyCicle = 150;             ///Valor en tiempo de la señal en alto
 	//Cargamos la configuracion
 	pwm_Config(&handler_PWM_Servo);
 	//Activar el TIMER y con ello el PWM
@@ -718,11 +718,11 @@ void control_Servo(uint8_t pos)
 	//Deacuerdo a la posicion se establece un valor de ductty diferente
 	if(pos==1)
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 120);
+		updateDuttyCycle(&handler_PWM_Servo, 150);
 	}
 	else if(pos==2)
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 160);
+		updateDuttyCycle(&handler_PWM_Servo, 100);
 	}
 	else
 	{

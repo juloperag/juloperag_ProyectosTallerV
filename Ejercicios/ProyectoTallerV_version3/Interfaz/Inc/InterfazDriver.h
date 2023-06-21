@@ -19,7 +19,7 @@
 //Definimos las cabeceras para el uso de la interfaz de usuario
 void executeChar(I2C_Handler_t *prthandlerI2C, char data);
 
-void InterfaceStart(I2C_Handler_t *prthandlerI2C);
+void InterfaceStart(I2C_Handler_t *prthandlerI2C, uint8_t *items_Containers);
 void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *amount_containers);
 void InterfaceOpeCounting(I2C_Handler_t *prthandlerI2C, uint8_t caseOper, uint8_t disco, uint8_t parameter);
 uint8_t InterfaceOpeSelectedCon(I2C_Handler_t *prthandlerI2C, uint8_t caseOper,  uint8_t parameter);

@@ -226,7 +226,7 @@ void setFrequency(PWM_Handler_t *prtPwmHandler)
 
 	/*La frecuencia de reloj contador CK_CNT es igual a fck_psc/(psc[15:0]+1)
 	* por tanto define la velocidad a la que incrementa el counter y con ello la del TIMER*/
-	prtPwmHandler->ptrTIMx->PSC = (clock*2)*(prtPwmHandler->config.periodcnt)-1; //(min:0, max:65536)
+	prtPwmHandler->ptrTIMx->PSC = (clock)*(prtPwmHandler->config.periodcnt)-1; //(min:0, max:65536)
 	/*Cargamos el valor del ARR el cual es e limite de incrementos del TIMER
 	 * antes de hacer una update y reload
 	 */

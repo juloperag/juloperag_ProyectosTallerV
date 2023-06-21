@@ -41,6 +41,7 @@ void lcd_i2c_clear(I2C_Handler_t *ptrHandlerLCDI2C);
 void lcd_i2c_cursor_blinky_Enable(I2C_Handler_t *ptrHandlerLCDI2C);
 void lcd_i2c_cursor_blinky_Disabled(I2C_Handler_t *ptrHandlerLCDI2C);
 void lcd_i2c_gotoxy(I2C_Handler_t *ptrHandlerLCDI2C, uint8_t row, uint8_t column);
+void lcd_i2c_data(I2C_Handler_t *ptrHandlerLCDI2C, char data);
 void lcd_i2c_putc(I2C_Handler_t *ptrHandlerLCDI2C, char *MsgtoSend);
 
 #endif /* INC_LCD_I2CDRIVER_H_ */

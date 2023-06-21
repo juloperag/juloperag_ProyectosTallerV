@@ -64,8 +64,6 @@ void executeChar(I2C_Handler_t *prthandlerI2C, char data)
 			stage=3;             //Cambiamos la etapa
 			wait_Value = 0; 	  //Establecemos un valor falso para la variable de dicho ciclo while
 			boolstage = 0;
-			//Desactivamos el modo parpadeante del cursor
-			lcd_i2c_cursor_blinky_Enable(prthandlerI2C);
 
 			break;
 		}
@@ -95,7 +93,6 @@ void executeChar(I2C_Handler_t *prthandlerI2C, char data)
 			{
 				stage=0;                     //Cambiamos la etapa
 				wait_Value = 0;              //Establecemos un valor falso para la variable de dicho ciclo while
-
 			}
 			break;
 		}
@@ -112,9 +109,16 @@ void executeChar(I2C_Handler_t *prthandlerI2C, char data)
 	case 'N':
 	{
 		//verificamos si la seccion es superior a 0
-		if(stage>0 && stage<4)
+		if(stage==1)
 		{
-			stage--;   //Restamos a la variable de la seccion
+			stage--;                //Restamos a la variable de la seccion
+			wait_Value = 0;        //Establecemos un valor falso para la variable de dicho ciclo while
+			boolstage = 0;
+			boolInterface = 0;     //Establecemos un valor de falso
+		}
+		else if(stage>1 && stage<4)
+		{
+			stage--;                //Restamos a la variable de la seccion
 			wait_Value = 0;        //Establecemos un valor falso para la variable de dicho ciclo while
 			boolstage = 0;
 		}
@@ -130,7 +134,7 @@ void executeChar(I2C_Handler_t *prthandlerI2C, char data)
 		if(stage==2 || stage==5)
 		{
 			//Verificamos si el numero de recipiente es menor a la cantidad de recipientes
-			if(selected_Containers<(amount_Containers-1) && executeOSC == 1)
+			if(selected_Containers<(amount_Containers-1) && executeOSC == 0)
 			{
 				selected_Containers++;       //Sumanos a la variable selector de recipiente
 				wait_Value = 0;			  //Establecemos un valor falso para la variable de dicho ciclo while
@@ -152,7 +156,7 @@ void executeChar(I2C_Handler_t *prthandlerI2C, char data)
 		if(stage==2 || stage==5)
 		{
 			//Verificamos si el numero de recipiente es mayor a 0
-			if(selected_Containers>0  && executeOSC == 1)
+			if(selected_Containers>0  && executeOSC == 0)
 			{
 				selected_Containers--;      //Restamos a la variable del numero de recipiente
 				wait_Value = 0;           //Establecemos un valor falso para la variable de dicho ciclo while
@@ -174,8 +178,7 @@ void executeChar(I2C_Handler_t *prthandlerI2C, char data)
 		if(stage==2)
 		{
 			digit_Position = 1;  //cambiamos el valor de la posicion del digito
-			//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
-			lcd_i2c_gotoxy(prthandlerI2C, 1, (13-digit_Position));
+			wait_Value = 0;   //Reiniciamos variable
 		}
 		else if (stage==0)
 			{
@@ -195,8 +198,8 @@ void executeChar(I2C_Handler_t *prthandlerI2C, char data)
 		if(stage==2)
 		{
 			digit_Position = 0;   //cambiamos el valor de la posicion del digito
-			//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
-			lcd_i2c_gotoxy(prthandlerI2C, 1, (13-digit_Position));
+			wait_Value = 0;   //Reiniciamos variable
+
 		}
 		else if (stage==0)
 		{
@@ -257,12 +260,25 @@ void executeChar(I2C_Handler_t *prthandlerI2C, char data)
 	}
 }
 
-void InterfaceStart(I2C_Handler_t *prthandlerI2C)
+void InterfaceStart(I2C_Handler_t *prthandlerI2C, uint8_t *items_Containers)
 {
 	msgInterface(prthandlerI2C); //se envia la seccion establecida
+	//Pausa
+	delay_ms(250);
+	//Defeinimos la etapa 1 en la lcd
+	lcd_i2c_gotoxy(prthandlerI2C, 1, 0);
+	lcd_i2c_putc(prthandlerI2C, "Et: Separacion");
+	//Desactivamos el modo parpadeante del cursor
+	lcd_i2c_cursor_blinky_Disabled(prthandlerI2C);
+
 	boolInterface = 1; //Reinicio de varibles
 	wait_Value = 1;
+	auxstage = 1;
 	stopOperation = 0;
+	for(uint8_t i=0;i<6;i++)
+	{
+		items_Containers[i]=0;
+	}
 
 	while(boolInterface)
 	{
@@ -274,7 +290,7 @@ void InterfaceStart(I2C_Handler_t *prthandlerI2C)
 		wait_Value = 1;  //Reiniciamos
 
 		//verificamos que el Caracter es arriba o abajo
-		if (charRead == 'A' && charRead == 'D')
+		if (charRead == 'A' || charRead == 'D')
 		{
 			//Impiamos fila inferior
 			lcd_i2c_gotoxy(prthandlerI2C, 1, 0);
@@ -283,7 +299,7 @@ void InterfaceStart(I2C_Handler_t *prthandlerI2C)
 			switch (auxstage) {
 			case 1:
 			{
-				lcd_i2c_gotoxy(prthandlerI2C, 1, 1);
+				lcd_i2c_gotoxy(prthandlerI2C, 1, 0);
 				lcd_i2c_putc(prthandlerI2C, "Et: Separacion");
 				break;
 			}
@@ -318,16 +334,11 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 	boolstage = 1;
 	wait_Value = 1;
 	charRead = '\0';
-	stage = 0;
 	digit_Position = 0;
 	amount_Containers= 0;
 	selected_Containers = 0;
 	unidades = 0;
 	decenas = 0;
-	for(uint8_t i=0;i<6;i++)
-	{
-		items_Containers[i]=0;
-	}
 
 	//Ciclo while que se ejecuta durante la configuracion de las cantidades de los recipientes
 	while(boolInterface)
@@ -339,13 +350,19 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 		//Mostramos la cantidad actual deacuerdo a la etapa en que se esta actualmente
 		if(stage==1)
 		{
+			//Activamos el modo parpadeante del cursor
+			lcd_i2c_cursor_blinky_Enable(prthandlerI2C);
 			//Enviamos mensaje
 			sprintf(bufferMsg,"%u",amount_Containers);
 			lcd_i2c_gotoxy(prthandlerI2C, 1, 8);
 			lcd_i2c_putc(prthandlerI2C, bufferMsg);
+			//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
+			lcd_i2c_gotoxy(prthandlerI2C, 1, 8);
 		}
 		else if(stage==2)
 		{
+			//Activamos el modo parpadeante del cursor
+			lcd_i2c_cursor_blinky_Enable(prthandlerI2C);
 			//Mostramos por pantalla la cantidad definidad
 			msgNumContainer(prthandlerI2C,items_Containers[selected_Containers]);
 			//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
@@ -384,6 +401,8 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 					sprintf(bufferMsg,"%u",amount_Containers);
 					lcd_i2c_gotoxy(prthandlerI2C, 1, 8);
 					lcd_i2c_putc(prthandlerI2C, bufferMsg);
+					//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
+					lcd_i2c_gotoxy(prthandlerI2C, 1, 8);
 				}
 				else
 				{
@@ -391,7 +410,7 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 				}
 
 				//Verificamos que el valor asignado sea el correcto, de lo contrario se envia un mensaje de avertencia
-				if(amount_Containers>6 || amount_Containers==0)
+				if((amount_Containers>6 || amount_Containers==0) && stage==1)
 				{
 					//En caso de superar el limite de recipientes se envia una avertencia
 					if(amount_Containers>6)
@@ -399,9 +418,9 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 						//limpiamos la pantalla
 						lcd_i2c_clear(prthandlerI2C);
 						//Envio de mensaje
-						lcd_i2c_gotoxy(prthandlerI2C, 0, 1);
+						lcd_i2c_gotoxy(prthandlerI2C, 0, 2);
 						lcd_i2c_putc(prthandlerI2C, "Recipientes");
-						lcd_i2c_gotoxy(prthandlerI2C, 1, 2);
+						lcd_i2c_gotoxy(prthandlerI2C, 1, 3);
 						lcd_i2c_putc(prthandlerI2C, "Excedidos");
 					}
 					//En caso de no definir un numero de recipiente se envia una avertencia
@@ -412,9 +431,10 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 						//Envio de mensaje
 						lcd_i2c_gotoxy(prthandlerI2C, 0, 4);
 						lcd_i2c_putc(prthandlerI2C, "Cantidad");
-						lcd_i2c_gotoxy(prthandlerI2C, 1, 2);
+						lcd_i2c_gotoxy(prthandlerI2C, 1, 3);
 						lcd_i2c_putc(prthandlerI2C, "no definida");
 					}
+					amount_Containers=0;
 					//Pausa
 					delay_ms(1000);
 					//se establece de nuevo el mensaje de la seccion
@@ -428,8 +448,6 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 				{
 					stage=2;                   //Cambiamos la etapa
 					boolstage = 0;
-					//Activamos el modo parpadeante del cursor
-					lcd_i2c_cursor_blinky_Enable(prthandlerI2C);
 				}
 				else
 				{
@@ -445,26 +463,36 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 					__NOP();
 				}
 				wait_Value = 1;  //Reiniciamos
-
 				//verificamos que el Caracter es arriba o abajo
 				if(charRead=='W' || charRead=='S')
 				{
 					//Reiniciamos variables
 					digit_Position = 0;
+					//Mostramos por pantalla el recipiente seleccionado
+					msgContainers(prthandlerI2C);
 					//Mostramos por pantalla la cantidad definidad
 					msgNumContainer(prthandlerI2C, items_Containers[selected_Containers]);
 					//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
 					lcd_i2c_gotoxy(prthandlerI2C, 1, (13-digit_Position));
 				}
 				//verificamos que el Caracter es un numero
+				else if (charRead=='A' || charRead=='D')
+				{
+					//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
+					lcd_i2c_gotoxy(prthandlerI2C, 1, (13-digit_Position));
+				}
+				else if(charRead=='E')
+				{
+					//Desactivamos el modo parpadeante del cursor
+					lcd_i2c_cursor_blinky_Disabled(prthandlerI2C);
+				}
 				else if(charRead>='0' && charRead<='9')
 				{
 					//Convertimos y guardamos el caracter leido como un numero entero
 					obtainNum(charRead);
 					items_Containers[selected_Containers] = obtainAmount();
 					//Enviamos mensajes
-					sprintf(bufferMsg,"%u", charRead);
-					lcd_i2c_putc(prthandlerI2C, bufferMsg);
+					lcd_i2c_data(prthandlerI2C, charRead);
 					//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
 					lcd_i2c_gotoxy(prthandlerI2C, 1, (13-digit_Position));
 				}
@@ -500,8 +528,8 @@ void InterfaceOpeCounting(I2C_Handler_t *prthandlerI2C, uint8_t caseOper, uint8_
 	{
 		//Cargamos la posicion de los recipiente al selected_Containers
 		defineSelectedContainers(parameter);
-		//mostramos el recipiente actual
-		msgContainers(prthandlerI2C);
+		//Enviamos un mensaje que indica la  Separacion de elementos y el recipiente
+		msgInterface(prthandlerI2C);
 
 		break;
 	}
@@ -513,6 +541,7 @@ void InterfaceOpeCounting(I2C_Handler_t *prthandlerI2C, uint8_t caseOper, uint8_
 	case 3:
 	{
 		executeStopOperaction(prthandlerI2C, disco ,parameter);
+		break;
 	}
 	case 4:
 	{
@@ -524,6 +553,7 @@ void InterfaceOpeCounting(I2C_Handler_t *prthandlerI2C, uint8_t caseOper, uint8_
 		{
 			executeOSC=1;
 		}
+		break;
 	}
 	case 5:
 	{
@@ -614,15 +644,15 @@ void msgInterface(I2C_Handler_t *prthandlerI2C)
 	case 1:
 	{
 		//Enviamos mensaje
-		lcd_i2c_gotoxy(prthandlerI2C, 0, 2);
-		lcd_i2c_putc(prthandlerI2C, "N°Recipientes:");
+		lcd_i2c_gotoxy(prthandlerI2C, 0, 1);
+		lcd_i2c_putc(prthandlerI2C, "N.Recipientes:");
 		break;
 	}
 	case 2:
 	{
 		//Enviamos mensaje
-		lcd_i2c_gotoxy(prthandlerI2C, 0, 2);
-		lcd_i2c_putc(prthandlerI2C, "N°Elementos:");
+		lcd_i2c_gotoxy(prthandlerI2C, 0, 1);
+		lcd_i2c_putc(prthandlerI2C, "N.Elementos:");
 		//mensaje recipiente seleccionado
 		msgContainers(prthandlerI2C);
 		break;
@@ -631,7 +661,7 @@ void msgInterface(I2C_Handler_t *prthandlerI2C)
 	{
 		//Enviamos mensaje
 		lcd_i2c_gotoxy(prthandlerI2C, 0, 5);
-		lcd_i2c_putc(prthandlerI2C, "¿Desea");
+		lcd_i2c_putc(prthandlerI2C, "Desea");
 		//Enviamos mensaje
 		lcd_i2c_gotoxy(prthandlerI2C, 1, 3);
 		lcd_i2c_putc(prthandlerI2C, "Comenzar?");
@@ -649,7 +679,7 @@ void msgInterface(I2C_Handler_t *prthandlerI2C)
 	case 5:
 	{
 		//Enviamos mensaje
-		lcd_i2c_gotoxy(prthandlerI2C, 0, 5);
+		lcd_i2c_gotoxy(prthandlerI2C, 0, 4);
 		lcd_i2c_putc(prthandlerI2C, "Seleccion");
 		//mensaje recipiente seleccionado
 		msgContainers(prthandlerI2C);
@@ -676,42 +706,42 @@ void msgContainers(I2C_Handler_t *prthandlerI2C)
 	{
 		//Enviamos mensaje
 		lcd_i2c_gotoxy(prthandlerI2C, 1, 3);
-		lcd_i2c_putc(prthandlerI2C, "Rec N°1:");
+		lcd_i2c_putc(prthandlerI2C, "Rec N.1:");
 		break;
 	}
 	case 1:
 	{
 		//Enviamos mensaje
 		lcd_i2c_gotoxy(prthandlerI2C, 1, 3);
-		lcd_i2c_putc(prthandlerI2C, "Rec N°2:");
+		lcd_i2c_putc(prthandlerI2C, "Rec N.2:");
 		break;
 	}
 	case 2:
 	{
 		//Enviamos mensaje
 		lcd_i2c_gotoxy(prthandlerI2C, 1, 3);
-		lcd_i2c_putc(prthandlerI2C, "Rec N°3:");
+		lcd_i2c_putc(prthandlerI2C, "Rec N.3:");
 		break;
 	}
 	case 3:
 	{
 		//Enviamos mensaje
 		lcd_i2c_gotoxy(prthandlerI2C, 1, 3);
-		lcd_i2c_putc(prthandlerI2C, "Rec N°4:");
+		lcd_i2c_putc(prthandlerI2C, "Rec N.4:");
 		break;
 	}
 	case 4:
 	{
 		//Enviamos mensaje
 		lcd_i2c_gotoxy(prthandlerI2C, 1, 3);
-		lcd_i2c_putc(prthandlerI2C, "Rec N°5:");
+		lcd_i2c_putc(prthandlerI2C, "Rec N.5:");
 		break;
 	}
 	case 5:
 	{
 		//Enviamos mensaje
 		lcd_i2c_gotoxy(prthandlerI2C, 1, 3);
-		lcd_i2c_putc(prthandlerI2C, "Rec N°6:");
+		lcd_i2c_putc(prthandlerI2C, "Rec N.6:");
 		break;
 	}
 	default:
@@ -808,6 +838,8 @@ void executeStopOperaction(I2C_Handler_t *prthandlerI2C, uint8_t disco, uint8_t 
 	}
 	if(status==0)
 	{
+		//limpiamos la pantalla
+		lcd_i2c_clear(prthandlerI2C);
 		//Envio de mensaje
 		lcd_i2c_gotoxy(prthandlerI2C, 0, 4);
 		lcd_i2c_putc(prthandlerI2C, "Proceso");

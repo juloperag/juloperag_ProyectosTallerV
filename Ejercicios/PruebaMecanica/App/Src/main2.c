@@ -56,7 +56,7 @@ int main(void)
 	int_Hardware();
 
 	//Activamos el SysTick
-	config_SysTick_ms(0);
+	config_SysTick_ms();
 
 	//Definimos par el PIN un 1 logico,
 	GPIO_writePin (&handler_BlinkyPin, SET);
@@ -184,10 +184,10 @@ void int_Hardware(void)
 	//Definimos el TIMx a usar
 	handler_PWM_Servo.ptrTIMx = TIM4;
 	//Definimos la configuracion para el PWM
-	handler_PWM_Servo.config.periodcnt = BTIMER_PCNT_1us; //BTIMER_PCNT_xus x->1,10,100/ BTIMER_PCNT_1ms
-	handler_PWM_Servo.config.periodo = 20000;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
+	handler_PWM_Servo.config.periodcnt = BTIMER_PCNT_10us; //BTIMER_PCNT_xus x->1,10,100/ BTIMER_PCNT_1ms
+	handler_PWM_Servo.config.periodo = 2000;             //Al definir 1us, 10us,100us el valor un multiplo de ellos, si es 1ms el valor es en ms
 	handler_PWM_Servo.config.channel = PWM_CHANNEL_1;     //PWM_CHANNEL_x x->1,2,3,4
-	handler_PWM_Servo.config.duttyCicle = 5;             //Valor entre 0-100 [%]
+	handler_PWM_Servo.config.duttyCicle = 100;             ///Valor en tiempo de la señal en alto
 	//Cargamos la configuracion
 	pwm_Config(&handler_PWM_Servo);
 	//Activar el TIMER y con ello el PWM
@@ -234,11 +234,11 @@ void Control_Servo(uint8_t dato)
 {
 	if(dato=='2')
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 8);
+		updateDuttyCycle(&handler_PWM_Servo, 150);
 	}
 	else if(dato=='3')
 	{
-		updateDuttyCycle(&handler_PWM_Servo, 6);
+		updateDuttyCycle(&handler_PWM_Servo, 100);
 	}
 	else
 	{
