@@ -363,6 +363,9 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 		{
 			//Activamos el modo parpadeante del cursor
 			lcd_i2c_cursor_blinky_Enable(prthandlerI2C);
+			//Obtenemos las decenas y unidades de la variabe
+			decenas = items_Containers[selected_Containers]/10;
+			unidades = items_Containers[selected_Containers] -decenas*10;
 			//Mostramos por pantalla la cantidad definidad
 			msgNumContainer(prthandlerI2C,items_Containers[selected_Containers]);
 			//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
@@ -415,6 +418,8 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 					//En caso de superar el limite de recipientes se envia una avertencia
 					if(amount_Containers>6)
 					{
+						//Desactivamos el modo parpadeante del cursor
+						lcd_i2c_cursor_blinky_Disabled(prthandlerI2C);
 						//limpiamos la pantalla
 						lcd_i2c_clear(prthandlerI2C);
 						//Envio de mensaje
@@ -426,6 +431,8 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 					//En caso de no definir un numero de recipiente se envia una avertencia
 					else
 					{
+						//Desactivamos el modo parpadeante del cursor
+						lcd_i2c_cursor_blinky_Disabled(prthandlerI2C);
 						//limpiamos la pantalla
 						lcd_i2c_clear(prthandlerI2C);
 						//Envio de mensaje
@@ -437,11 +444,15 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 					amount_Containers=0;
 					//Pausa
 					delay_ms(1000);
+					//Activamos el modo parpadeante del cursor
+					lcd_i2c_cursor_blinky_Enable(prthandlerI2C);
 					//se establece de nuevo el mensaje de la seccion
 					msgInterface(prthandlerI2C);
 					sprintf(bufferMsg,"%u",amount_Containers);
 					lcd_i2c_gotoxy(prthandlerI2C, 1, 8);
 					lcd_i2c_putc(prthandlerI2C, bufferMsg);
+					//Posicionamos el cursor en la posicion deacuerdo a la variable digit_Position
+					lcd_i2c_gotoxy(prthandlerI2C, 1, 8);
 				}
 				//Si la cantidad de recipientes cumple y ademas la tecla precionada fue la 'E' entonces se cambia el estado
 				else if(charRead=='E')
@@ -468,6 +479,9 @@ void InterfaceConfigContainer(I2C_Handler_t *prthandlerI2C,uint8_t *items_Contai
 				{
 					//Reiniciamos variables
 					digit_Position = 0;
+					//Obtenemos las decenas y unidades de la variabe
+					decenas = items_Containers[selected_Containers]/10;
+					unidades = items_Containers[selected_Containers] - decenas*10;
 					//Mostramos por pantalla el recipiente seleccionado
 					msgContainers(prthandlerI2C);
 					//Mostramos por pantalla la cantidad definidad
@@ -535,16 +549,19 @@ void InterfaceOpeCounting(I2C_Handler_t *prthandlerI2C, uint8_t caseOper, uint8_
 	}
 	case 2:
 	{
+		//Indicamos los elementos que nos hacen falta
 		msgNumContainer(prthandlerI2C, parameter);
 		break;
 	}
 	case 3:
 	{
+		//Funcion para detener el movimiento del disco
 		executeStopOperaction(prthandlerI2C, disco ,parameter);
 		break;
 	}
 	case 4:
-	{
+
+	{	//Bandera para indicar si se esta moviendo el disco inferior
 		if(parameter==0)
 		{
 			executeOSC=0;

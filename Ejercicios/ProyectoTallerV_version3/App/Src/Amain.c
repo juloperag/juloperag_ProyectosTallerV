@@ -168,26 +168,38 @@ int main(void)
 					delay_ms(250);
 					 //Variable que guarda el valor anterior a la cantidad de elementos que pasa delante del sensor
 					uint8_t cantidadAnt = contador+1;
-
-					//El MPP se mueve cada 10 pasos por cada ciclo While. Se detiene cuando se cumpla la cantidad deseada de elementos.
-					while(movState && obtainStage()==4)
+					//Verificamos que la cantidad especificada sea diferente de cero
+					if (canRecipiente[pos_canRec]>0)
 					{
+						//El MPP se mueve cada 10 pasos por cada ciclo While. Se detiene cuando se cumpla la cantidad deseada de elementos.
+						while(movState && obtainStage()==4 )
+						{
+							control_MPP();
+							if (contador!=cantidadAnt)
+							{
+								//aumentamos el valor de los elementos
+								conRecipiente[pos_canRec]++;
+								//Se muestra la cantidad faltante de elmentos para el respectivo recipiente
+								InterfaceOpeCounting(&handler_I2C_LCD, 2, 1, (canRecipiente[pos_canRec]-contador));
+								//Guardamos la cantidad actual de elemntos contados
+								cantidadAnt = contador;
+							}
+							else
+							{
+								__NOP();
+							}
+							//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
+							InterfaceOpeCounting(&handler_I2C_LCD, 3, 1, (canRecipiente[pos_canRec]-contador));
+						}
+						//Movemos una vez mas para asegurar
 						control_MPP();
-						if (contador!=cantidadAnt)
-						{
-							//aumentamos el valor de los elementos
-							conRecipiente[pos_canRec]++;
-							//Se muestra la cantidad faltante de elmentos para el respectivo recipiente
-							InterfaceOpeCounting(&handler_I2C_LCD, 2, 1, (canRecipiente[pos_canRec]-contador));
-							//Guardamos la cantidad actual de elemntos contados
-							cantidadAnt = contador;
-						}
-						else
-						{
-							__NOP();
-						}
-						//En caso que el boton "F1" fue precionado se genera una pausa de la operacion
-						InterfaceOpeCounting(&handler_I2C_LCD, 3, 1, (canRecipiente[pos_canRec]-contador));
+						//Guardamos la cantidad contada
+						conRecipiente[pos_canRec]=contador;
+
+					}
+					else
+					{
+						__NOP();
 					}
 					movState = 1; //se define un valor alto
 					contador = 0;   //Reiniciamos la variable
